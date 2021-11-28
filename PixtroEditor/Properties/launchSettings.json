@@ -2,7 +2,7 @@
   "profiles": {
     "PixtroEditor": {
       "commandName": "Project",
-      "commandLineArgs": "\"C:\\Users\\IsaGoodFriend\\source\\HomeBrew\\PixtroEditor\\TestProjects\\TestEmpty\\testProject.pxprj\""
+      "commandLineArgs": "\"C:\\Users\\IsaGoodFriend\\source\\HomeBrew\\Celeste\\celeste.pxprj\""
     }
   }
 }

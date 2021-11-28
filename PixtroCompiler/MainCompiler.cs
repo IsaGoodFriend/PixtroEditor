@@ -311,6 +311,10 @@ namespace Pixtro.Compiler
 			// Make sure directory for build sources exists
 			Directory.CreateDirectory(Path.Combine(Settings.ProjectPath, "build/source"));
 
+#if DEBUG
+			if (!Settings.Clean)
+				FullCompiler.Compile();
+#else
 			if (Settings.Clean)
 			{
 				// Todo : Add cleaning functionality
@@ -327,6 +331,7 @@ namespace Pixtro.Compiler
 					Error = true;
 				}
 			}
+#endif
 
 			if (Error)
 				return false;
@@ -386,10 +391,10 @@ namespace Pixtro.Compiler
 		}
 		public static void DebugLog(object log)
 		{
-			//if (HasArgument("-log")) {
-			//	Console.ForegroundColor = ConsoleColor.White;
-			//	Console.WriteLine(log.ToString());
-			//}
+#if DEBUG
+			Console.ForegroundColor = ConsoleColor.White;
+			Console.WriteLine(log.ToString());
+#endif
 		}
 
 		public static event Action<string> StandardOutput;

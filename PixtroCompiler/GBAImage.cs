@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace Pixtro.Compiler
 {
@@ -18,6 +18,9 @@ namespace Pixtro.Compiler
 
 			byte* ptr = (byte*)data.Scan0;
 
+
+			MainCompiler.DebugLog($"\tDebug info: {map.PixelFormat} {((long)ptr):X}");
+
 			for (int y = section.Top; y < section.Bottom; ++y)
 			{
 				for (int x = section.Left; x < section.Right; ++x)
@@ -27,7 +30,8 @@ namespace Pixtro.Compiler
 					values[x - section.X, y - section.Y] = new FloatColor(ptr[i + 2], ptr[i + 1], ptr[i], ptr[i + 3]);
 				}
 			}
-
+			Thread.Sleep(1000);
+			
 			map.UnlockBits(data);
 
 			return new GBAImage(values);
@@ -40,7 +44,11 @@ namespace Pixtro.Compiler
 			if (map.Width % 8 != 0 || map.Height % 8 != 0)
 				throw new Exception();
 
-			return FromBitmap(map, new Rectangle(0, 0, map.Width, map.Height));
+			var image = FromBitmap(map, new Rectangle(0, 0, map.Width, map.Height));
+
+			map.Dispose();
+
+			return image;
 		}
 		public static GBAImage[] AnimateFromFile(string path, int width, int height)
 		{
@@ -57,6 +65,8 @@ namespace Pixtro.Compiler
 				frameY = map.Height / height;
 
 			List<GBAImage> images = new List<GBAImage>();
+
+			MainCompiler.DebugLog(Path.GetFileName(path));
 
 			for (int y = 0; y < frameY; ++y)
 			{

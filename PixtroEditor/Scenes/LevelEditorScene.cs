@@ -10,6 +10,8 @@ namespace Pixtro.Scenes {
 	public enum LevelEditorStates {
 		None,
 		Draw,
+		Erase,
+		Rectangle,
 		Pan,
 	}
 	public class LevelEditorScene : Scene {
@@ -99,7 +101,20 @@ namespace Pixtro.Scenes {
 
 			OnMouseDrag += MouseDragged;
 
-			SetTile(MInput.Mouse.Position, 1);
+
+			var state = baseState;
+			if (heldState != LevelEditorStates.None) {
+				state = heldState;
+			}
+
+			switch (state) {
+				case LevelEditorStates.Draw:
+					SetTile(MInput.Mouse.Position, 1);
+					break;
+				case LevelEditorStates.Erase:
+					SetTile(MInput.Mouse.Position, 0);
+					break;
+			}
 		}
 
 		private void MouseUp(int x, int y, bool newScene) {
@@ -121,6 +136,9 @@ namespace Pixtro.Scenes {
 					break;
 				case LevelEditorStates.Draw:
 					DrawLine(MInput.Mouse.Position, new Vector2(MInput.Mouse.PreviousState.X, MInput.Mouse.PreviousState.Y), 1);
+					break;
+				case LevelEditorStates.Erase:
+					DrawLine(MInput.Mouse.Position, new Vector2(MInput.Mouse.PreviousState.X, MInput.Mouse.PreviousState.Y), 0);
 					break;
 			}
 
@@ -183,11 +201,11 @@ namespace Pixtro.Scenes {
 		public override void FocusedUpdate() {
 			base.FocusedUpdate();
 
-			if (MInput.Keyboard.Check(Keys.Q)) {
-				visualGrid.Clear();
-				for (int tx = 0; tx < rawTilemap.Columns; tx++)
-					for (int ty = 0; ty < rawTilemap.Rows; ty++)
-						rawTilemap[tx, ty] = 0;
+			if (MInput.Keyboard.Pressed(Keys.B)) {
+				baseState = LevelEditorStates.Draw;
+			}
+			if (MInput.Keyboard.Pressed(Keys.E)) {
+				baseState = LevelEditorStates.Erase;
 			}
 
 			if (MInput.Mouse.WheelDelta != 0) {
@@ -210,6 +228,12 @@ namespace Pixtro.Scenes {
 			base.DrawGraphics();
 			Draw.Depth = Draw.FARTHEST_DEPTH;
 			Draw.Rect(0, 0, rawTilemap.Columns * TileSize, rawTilemap.Rows * TileSize, ColorSchemes.CurrentScheme.CanvasBackground);
+
+			Draw.Depth++;
+			for (int i = 1; i < rawTilemap.Columns; ++i)
+				Draw.Rect(8 * i, 0, 1 / Camera.Zoom, rawTilemap.Rows * TileSize, Color.Black);
+			for (int i = 1; i < rawTilemap.Rows; ++i)
+				Draw.Rect(0, 8 * i, rawTilemap.Columns * TileSize, 1 / Camera.Zoom, Color.Black);
 		}
 	}
 }
