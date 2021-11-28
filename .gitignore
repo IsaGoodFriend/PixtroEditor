@@ -1,31 +1,16 @@
-/Engine/build/
-/snes9xgit
-
 **/.vs/**
 **/.vscode/
 **/bin/**
 **/obj/**
 
-/Editor/output/**
-/Editor/output64/**
-/Editor/packaged_output/**
-/Editor/test_output/**
-/Editor/TestProjects/**
-/Editor/ExternalProjects/**
-/Editor/ExternalToolProjects/**
-/Editor/packages/**
-
+/PixtroEditor/Assets/dll/**
+/PixtroEditor/packages/**
 
 **/Release/**
 **/Debug/**
 **/ipch/**
 
-*sprites.c
-*sprites.h
-*levels.c
-*levels.h
-RandomTestStuff.cs
-pixtro_develop.pnproj
+**/build/source/**
 
 *.gz
 *.zip
