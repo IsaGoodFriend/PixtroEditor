@@ -34,8 +34,6 @@ extern int drawing_flags;
 #define FLIP_Y 0x2000
 #define FLIP_XY 0x3000
 
-#define LOAD_TILESET(name) load_tileset((unsigned int *)TILESET_##name, (unsigned short *)TILE_MAPPING_##name, (unsigned int *)TILECOLL_##name, TILESET_##name##_len)
-
 extern int cam_x, cam_y;
 
 void load_sprite(unsigned int *sprite, int index, int shape);
@@ -44,9 +42,11 @@ void load_obj_pal(unsigned short *pal, int palIndex);
 void load_bg_pal(unsigned short *pal, int palIndex);
 
 #ifdef LARGE_TILES
+#define LOAD_TILESET(name) load_tileset((unsigned int *)TILESET_##name, (unsigned short *)TILE_MAPPING_##name, (unsigned int *)TILECOLL_##name, TILESET_##name##_len)
 void load_tileset(unsigned int *tiles, unsigned short *mapping, unsigned int *collision, int count);
 #else
-void load_tileset(unsigned int *tiles, int count);
+#define LOAD_TILESET(name) load_tileset((unsigned int *)TILESET_##name, (unsigned int *)TILECOLL_##name, TILESET_##name##_len)
+void load_tileset(unsigned int *tiles, unsigned int *collision, int count);
 #endif
 
 void draw(int x, int y, int sprite, int flip, int prio, int pal);

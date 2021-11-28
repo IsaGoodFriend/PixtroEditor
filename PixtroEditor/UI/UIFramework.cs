@@ -40,6 +40,13 @@ namespace Pixtro.UI {
 
 			Point mouse = new Point((int)MInput.Mouse.X, (int)MInput.Mouse.Y);
 
+			if (!MInput.IsUpdating) {
+				ClickedControl = null;
+				SelectedControl = null;
+				HoveredControl = null;
+				return;
+			}
+
 			if (MInput.Mouse.ReleasedLeftButton) {
 				if (ClickedControl != null && ClickedControl.Bounds.Contains(mouse))
 					ClickedControl.Click();

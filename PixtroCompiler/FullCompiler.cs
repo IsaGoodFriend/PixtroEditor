@@ -44,8 +44,10 @@ namespace Pixtro.Compiler
 	}
 #pragma warning restore CS0649
 
-	internal static class FullCompiler
-	{
+	internal static class FullCompiler {
+		struct ImageCompiledMeta {
+
+		}
 		private static string GetLocalPath(string file, string folder)
 		{
 			file = file.Replace('\\', '/');
@@ -131,6 +133,8 @@ namespace Pixtro.Compiler
 			void AddFile(string file)
 			{
 				string ext = Path.GetExtension(file);
+				if (!(ext == ".png" || ext == ".bmp" || ext == ".ase" || ext == ".aseprite"))
+					return;
 
 				string localPath = GetLocalPath(file, ArtPath);
 				string name = GetCompileName(file, ArtPath);
@@ -140,9 +144,9 @@ namespace Pixtro.Compiler
 					ImageMeta meta = null;
 
 					if (File.Exists(Path.ChangeExtension(file, ".meta.yaml")))
-						meta = MainCompiler.ParseMeta<ImageMeta>(File.ReadAllText(Path.ChangeExtension(file, ".meta.yaml")));
+						meta = MainProgram.ParseMeta<ImageMeta>(File.ReadAllText(Path.ChangeExtension(file, ".meta.yaml")));
 					if (meta == null && File.Exists(Path.ChangeExtension(file, ".meta.yml")))
-						meta = MainCompiler.ParseMeta<ImageMeta>(File.ReadAllText(Path.ChangeExtension(file, ".meta.yml")));
+						meta = MainProgram.ParseMeta<ImageMeta>(File.ReadAllText(Path.ChangeExtension(file, ".meta.yml")));
 
 					if (meta == null)
 					{
@@ -203,7 +207,7 @@ namespace Pixtro.Compiler
 				}
 				catch (Exception e)
 				{
-					MainCompiler.ErrorLog(e);
+					MainProgram.ErrorLog(e);
 				}
 			}
 
@@ -231,25 +235,25 @@ namespace Pixtro.Compiler
 				levelPath = Path.Combine(Settings.ProjectPath, LevelPath),
 				tilesetPath =  Path.Combine(Settings.ProjectPath, TilesetPath);
 
-			MainCompiler.Log("Compiling palettes");
+			MainProgram.Log("Compiling palettes");
 			// Compile palettes first to be used if needed when importing images
 			CompilePalettes(artCompiler);
 
-			MainCompiler.Log("Reading art assets");
+			MainProgram.Log("Reading art assets");
 			CompileAllImages();
 
-			MainCompiler.Log("Compiling Backgrounds");
+			MainProgram.Log("Compiling Backgrounds");
 			CompileBackgrounds(artCompiler);
 
-			MainCompiler.Log("Compiling sprites");
+			MainProgram.Log("Compiling sprites");
 			CompileSprites(artCompiler);
 
-			MainCompiler.Log("Compiling particles");
+			MainProgram.Log("Compiling particles");
 			CompileParticles(artCompiler);
 
 			//Compiler.DebugLog("Compiling backgrounds");
 
-			MainCompiler.Log("Compiling title cards");
+			MainProgram.Log("Compiling title cards");
 			CompileTitleCards(artCompiler);
 
 
@@ -334,7 +338,7 @@ namespace Pixtro.Compiler
 				if (parse.levelsIncluded.Count == 0)
 					continue;
 				// Compile the visual pack's brickset before compiling levels
-				MainCompiler.Log($"Compiling Visual Pack {pair.Key}");
+				MainProgram.Log($"Compiling Visual Pack {pair.Key}");
 
 				// Clear out section's entity count
 				typeSectionCount.Clear();
@@ -379,7 +383,7 @@ namespace Pixtro.Compiler
 					else // If the tileset doesn't exist, add an empty tile for the wrapping character
 					{
 						if (wrap.Tileset.ToLower() != "null")
-							MainCompiler.WarningLog($"Tileset {wrap.Tileset} does not exist.");
+							MainProgram.WarningLog($"Tileset {wrap.Tileset} does not exist.");
 
 						var brick = new Brick(Settings.BrickTileSize);
 						brick.collisionType = collType;
@@ -462,7 +466,9 @@ namespace Pixtro.Compiler
 
 					// Troubled.  Level doesn't exist with the accepted extensions
 					if (ext == "")
-						throw new Exception();
+						throw new FileNotFoundException($"The level file {localPath} was unable to be found.");
+
+					MainProgram.DebugLog($"Compiling Level {level}");
 
 					localPath = localPath.Replace('\\', '/') + ext;
 
@@ -472,7 +478,6 @@ namespace Pixtro.Compiler
 					typeLocalCount.Clear();
 
 					CompiledLevel.RNGSeed = (uint)new Random(localPath.GetHashCode()).Next(0x800, 0xFFFFFF);
-
 
 					switch (ext)
 					{
@@ -493,19 +498,56 @@ namespace Pixtro.Compiler
 					if (compressed == null)
 						throw new Exception();
 
+					long editTime = File.GetLastWriteTime(localPath).Ticks;
+
+					var compiledPath = Path.Combine(Settings.ProjectPath, "build/levels", level + ".comp");
+
 					localPath = $"LVL_{Path.GetFileNameWithoutExtension(level.Replace('/', '_').Replace('\\', '_'))}";
 
 					compiledLevels.Add(localPath, compressed);
 
 					levelCompiler.BeginArray(CompileToC.ArrayType.Char, localPath);
-					levelCompiler.AddRange(compressed.BinaryData());
+
+					void compileLevel() {
+						byte[] data = compressed.BinaryData();
+						levelCompiler.AddRange(data);
+
+						if (!Directory.Exists(Path.GetDirectoryName(compiledPath))) {
+							Directory.CreateDirectory(Path.GetDirectoryName(compiledPath));
+						}
+						using (var write = new BinaryWriter(File.Open(compiledPath, FileMode.OpenOrCreate, FileAccess.Write))) {
+							write.Write(editTime);
+							write.Write(data.Length);
+							write.Write(data);
+						}
+					}
+
+					if (File.Exists(compiledPath)) {
+
+						compileLevel();
+						//try {
+						//	using (var read = new BinaryReader(File.Open(compiledPath, FileMode.Open, FileAccess.Read))) {
+						//		if (read.ReadInt64() == editTime) {
+						//			int len = read.Read();
+						//			levelCompiler.AddRange(read.ReadBytes(len));
+						//		}
+						//		else {
+						//			compileLevel();
+						//		}
+						//	}
+						//}
+						//catch (Exception e) {
+						//	compileLevel();
+						//}
+					}
+					else {
+						compileLevel();
+					}
 					levelCompiler.EndArray();
 				}
-
-				
 			}
 
-			MainCompiler.Log("Compiling Level Packs");
+			MainProgram.Log("Compiling Level Packs");
 			// Compile Level Packs
 			foreach (var pack in levelPacks)
 			{
@@ -517,7 +559,7 @@ namespace Pixtro.Compiler
 
 				foreach (var level in pack.Value)
 				{
-					levelList.Add("LVL_" + level);
+					levelList.Add("LVL_" + level.Replace('/', '_').Replace('\\', '_'));
 				}
 
 				for (int i = 0; i < levelList.Count; ++i)
@@ -574,7 +616,7 @@ namespace Pixtro.Compiler
 //			}
 //#endif
 
-			MainCompiler.Log("Saving source files");
+			MainProgram.Log("Saving source files");
 			levelCompiler.SaveTo(toSavePath, "levels");
 			artCompiler.SaveTo(toSavePath, "sprites");
 
@@ -925,7 +967,7 @@ namespace Pixtro.Compiler
 					case ".png":
 						unsafe
 						{
-							using (Bitmap map = new Bitmap(file))
+							using (Bitmap map = GBAImage.GetFormattedBitmap(file))
 							{
 								if (map.Width % 16 != 0)
 									throw new Exception();
@@ -1059,6 +1101,8 @@ namespace Pixtro.Compiler
 				}
 
 				string cName = Regex.Replace(localPath, "^sprites_", "SPR_");
+
+				MainProgram.DebugLog(cName);
 
 				compiler.BeginArray(CompileToC.ArrayType.UInt, cName);
 
@@ -1258,7 +1302,7 @@ namespace Pixtro.Compiler
 			// Start of the actual code
 			if (File.Exists(Path.Combine(Settings.ProjectPath, BackgroundPath, "backgrounds.yaml")))
 			{
-				var backgrounds = MainCompiler.ParseMeta<Dictionary<string, string[]>>(File.ReadAllText(Path.Combine(Settings.ProjectPath, BackgroundPath, "backgrounds.yaml")));
+				var backgrounds = MainProgram.ParseMeta<Dictionary<string, string[]>>(File.ReadAllText(Path.Combine(Settings.ProjectPath, BackgroundPath, "backgrounds.yaml")));
 
 				foreach (var key in backgrounds.Keys)
 				{

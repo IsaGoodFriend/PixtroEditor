@@ -181,12 +181,20 @@ void load_anim_sprite(unsigned int *sprites, int index, int shape, int frames, i
 
 	anim_meta[index] |= shape << 16;
 }
+#ifdef LARGE_TILES
 void load_tileset(unsigned int *tiles, unsigned short *mapping, unsigned int *collision, int count)
 {
 	memcpy(&tile_mem[FG_TILESET][1], tiles, count << 5);
 	memcpy(TILE_INFO, mapping, count << 3);
 	load_tiletypes(collision);
 }
+#else
+void load_tileset(unsigned int *tiles, unsigned int *collision, int count)
+{
+	memcpy(&tile_mem[FG_TILESET][1], tiles, count << 4);
+	load_tiletypes(collision);
+}
+#endif
 void load_obj_pal(unsigned short *pal, int palIndex)
 {
 	memcpy(&pal_obj_mem[palIndex << 4], pal, copyPalette);

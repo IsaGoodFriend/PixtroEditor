@@ -28,7 +28,7 @@ namespace Pixtro.Projects {
 			BuildSuccess = false;
 			ReleaseBuild = release;
 
-			Compiler.MainCompiler.StandardOutput += Scenes.ConsoleScene.Log;
+			Compiler.MainProgram.StandardOutput += Scenes.ConsoleScene.Log;
 
 			if (CurrentProject.BuiltRelease != release) {
 				CurrentProject.CleanProject();
@@ -69,7 +69,7 @@ namespace Pixtro.Projects {
 			}
 
 #if DEBUG
-			bool success = Compiler.MainCompiler.Compile(CurrentProject.ProjectDirectory, args.ToArray());
+			bool success = Compiler.MainProgram.Compile(CurrentProject.ProjectDirectory, args.ToArray());
 #else
 			try
 			{

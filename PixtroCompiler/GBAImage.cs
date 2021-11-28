@@ -10,6 +10,23 @@ namespace Pixtro.Compiler
 {
 	public class GBAImage
 	{
+		public static Bitmap GetFormattedBitmap(string path) {
+			Bitmap map = new Bitmap(path);
+
+			if (map.PixelFormat != System.Drawing.Imaging.PixelFormat.Format32bppArgb) {
+
+				Bitmap clone = new Bitmap(map.Width, map.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+				using (Graphics gr = Graphics.FromImage(clone)) {
+					gr.DrawImage(map, new Rectangle(0, 0, clone.Width, clone.Height));
+				}
+				return clone;
+			}
+			else
+				return map;
+
+		}
+
 		private unsafe static GBAImage FromBitmap(Bitmap map, Rectangle section)
 		{
 			FloatColor[,] values = new FloatColor[section.Width, section.Height];
@@ -17,9 +34,6 @@ namespace Pixtro.Compiler
 			var data = map.LockBits(section, System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 
 			byte* ptr = (byte*)data.Scan0;
-
-
-			MainCompiler.DebugLog($"\tDebug info: {map.PixelFormat} {((long)ptr):X}");
 
 			for (int y = section.Top; y < section.Bottom; ++y)
 			{
@@ -30,16 +44,28 @@ namespace Pixtro.Compiler
 					values[x - section.X, y - section.Y] = new FloatColor(ptr[i + 2], ptr[i + 1], ptr[i], ptr[i + 3]);
 				}
 			}
-			Thread.Sleep(1000);
 			
 			map.UnlockBits(data);
+
+			return new GBAImage(values);
+		}
+		private unsafe static GBAImage FromBitmap(byte* ptr, int stride, Rectangle section) {
+			FloatColor[,] values = new FloatColor[section.Width, section.Height];
+
+			for (int y = section.Top; y < section.Bottom; ++y) {
+				for (int x = section.Left; x < section.Right; ++x) {
+					int i = (x * 4) + (y * stride);
+
+					values[x - section.X, y - section.Y] = new FloatColor(ptr[i + 2], ptr[i + 1], ptr[i], ptr[i + 3]);
+				}
+			}
 
 			return new GBAImage(values);
 		}
 
 		public static GBAImage FromFile(string path)
 		{
-			Bitmap map = new Bitmap(path);
+			Bitmap map = GetFormattedBitmap(path);
 
 			if (map.Width % 8 != 0 || map.Height % 8 != 0)
 				throw new Exception();
@@ -50,12 +76,12 @@ namespace Pixtro.Compiler
 
 			return image;
 		}
-		public static GBAImage[] AnimateFromFile(string path, int width, int height)
+		public unsafe static GBAImage[] AnimateFromFile(string path, int width, int height)
 		{
 			if (width % 8 != 0 || height % 8 != 0)
 				throw new Exception();
 
-			Bitmap map = new Bitmap(path);
+			Bitmap map = GetFormattedBitmap(path);
 
 			// Throw error if file can't be divided evenly
 			if (map.Width % width != 0 || map.Width % height != 0)
@@ -66,15 +92,21 @@ namespace Pixtro.Compiler
 
 			List<GBAImage> images = new List<GBAImage>();
 
-			MainCompiler.DebugLog(Path.GetFileName(path));
+			MainProgram.DebugLog(Path.GetFileName(path));
+
+			var data = map.LockBits(new Rectangle(0, 0, map.Width, map.Height), System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+			byte* ptr = (byte*)data.Scan0;
 
 			for (int y = 0; y < frameY; ++y)
 			{
 				for (int x = 0; x < frameX; ++x)
 				{
-					images.Add(FromBitmap(map, new Rectangle(x * width, y * height, width, height)));
+					images.Add(FromBitmap(ptr, data.Stride, new Rectangle(x * width, y * height, width, height)));
 				}
 			}
+
+			map.UnlockBits(data);
 
 			map.Dispose();
 
@@ -165,6 +197,56 @@ namespace Pixtro.Compiler
 			originalData = colors;
 
 			RecompileColors(exportPalettes);
+		}
+		public GBAImage(string path) {
+			using (var reader = new BinaryReader(File.OpenRead(path))) {
+				Width = reader.Read();
+				Height = reader.Read();
+
+				baseValues = new int[Width, Height];
+
+				int paletteCount = reader.ReadByte();
+
+				reader.BaseStream.Seek(16, SeekOrigin.Begin);
+
+				for (int i = 0; i < paletteCount; ++i) {
+					List<Color> palette = new List<Color>();
+					for (int c = 0; c < 16; ++c) {
+						Color col = Color.FromArgb(reader.ReadByte(), reader.ReadByte(), reader.ReadByte(), reader.ReadByte());
+
+						palette.Add(col);
+					}
+					finalPalettes.Add(palette.ToArray());
+				}
+
+				for (int y = 0; y < Height; ++y)
+					for (int x = 0; x < Width; ++x)
+						baseValues[x, y] = reader.Read();
+
+			}
+		}
+		public void Save(string path) {
+			using (var writer = new BinaryWriter(File.Open(path, FileMode.OpenOrCreate, FileAccess.Write))) {
+				writer.Write(Width);
+				writer.Write(Height);
+
+				writer.Write((byte)finalPalettes.Count);
+
+				writer.BaseStream.Seek(16, SeekOrigin.Begin);
+
+				for (int i = 0; i < finalPalettes.Count; ++i) {
+					for (int c = 0; c < 16; ++c) {
+						writer.Write(finalPalettes[i][c].A);
+						writer.Write(finalPalettes[i][c].R);
+						writer.Write(finalPalettes[i][c].G);
+						writer.Write(finalPalettes[i][c].B);
+					}
+				}
+
+				for (int y = 0; y < Height; ++y)
+					for (int x = 0; x < Width; ++x)
+						writer.Write(baseValues[x, y]);
+			}
 		}
 
 		public void RecompileColors(List<Color[]> exportPalettes = null)

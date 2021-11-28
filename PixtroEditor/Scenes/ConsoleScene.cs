@@ -26,6 +26,7 @@ namespace Pixtro.Scenes {
 
 		public static void Log(string text) {
 			ConsoleLines[ConsoleIndex++] = text;
+			ConsoleIndex %= CONSOLE_LINES;
 			outputFile.WriteLine(text);
 		}
 
@@ -42,7 +43,7 @@ namespace Pixtro.Scenes {
 				if (ConsoleLines[index] == null)
 					break;
 
-				Draw.Text(ConsoleLines[index], new Vector2(0, (i) * LINE_SPACE), Color.White);
+				Draw.Text(ConsoleLines[index], new Vector2(0, i * LINE_SPACE - (LINE_SPACE + 4)), Color.White);
 			}
 		}
 	}

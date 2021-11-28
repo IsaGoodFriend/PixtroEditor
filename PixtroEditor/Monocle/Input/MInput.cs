@@ -14,6 +14,8 @@ namespace Monocle {
 		public static bool Active = true;
 		public static bool Disabled = false;
 
+		public static bool IsUpdating { get; private set; }
+
 		internal static void Initialize() {
 			//Init devices
 			Keyboard = new KeyboardData();
@@ -33,16 +35,19 @@ namespace Monocle {
 			if (Engine.Instance.IsActive && Active && !Pixtro.Projects.ProjectInfo.Building) {
 				Keyboard.Update();
 				Mouse.Update();
-				
-
 				for (int i = 0; i < 4; i++)
 					GamePads[i].Update();
+
+				IsUpdating = true;
 			}
 			else {
 				Keyboard.UpdateNull();
 				Mouse.UpdateNull();
+
 				for (int i = 0; i < 4; i++)
 					GamePads[i].UpdateNull();
+
+				IsUpdating = false;
 			}
 
 			UpdateVirtualInputs();

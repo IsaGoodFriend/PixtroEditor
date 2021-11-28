@@ -395,7 +395,7 @@ namespace Pixtro.Compiler {
 		private void ReadChunk(uint type, int frameIndex, uint size) {
 
 
-			string value = BaseStream.Position.ToString("X");
+			string value = type.ToString("X");
 
 			switch (type) {
 				case 0x2018: // Tag data
