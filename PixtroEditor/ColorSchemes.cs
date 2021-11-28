@@ -5,7 +5,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Monocle;
 
-namespace Pixtro.Editor {
+namespace Pixtro {
 	public struct ColorSchemes {
 		public static ColorSchemes CurrentScheme { get; set; } = DarkTheme;
 
