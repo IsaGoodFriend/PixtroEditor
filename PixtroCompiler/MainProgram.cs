@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -199,10 +200,10 @@ namespace Pixtro.Compiler
 		{
 		}
 	}
-	public static class MainCompiler
+	public static class MainProgram
 	{
 
-		static MainCompiler()
+		static MainProgram()
 		{
 			yamlParse = new DeserializerBuilder().WithNamingConvention(NullNamingConvention.Instance).Build();
 		}
