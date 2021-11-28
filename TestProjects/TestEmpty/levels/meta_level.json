@@ -1,0 +1,43 @@
+{
+	"all": {
+		"LevelPacks" : ["test"],
+		
+		"EntityIndex" : {
+			"char" : 0
+		},
+		"Wrapping" : {
+			"M" : {
+				"CollisionType" : 1,
+				"Palettes" : [0],
+				"Tileset" : "test",
+				"Connections" : ["M"],
+				"Mapping" : ["1, 0", "-1, 0", "0, 1", "0, -1"],
+				"TileMapping" : {
+					"0111" : ["2, 1"],
+					"1011" : ["0, 1"],
+					"1101" : ["1, 2"],
+					"1110" : ["1, 0"],
+					
+					"0101" : ["2, 2"],
+					"1001" : ["0, 2"],
+					"0110" : ["2, 0"],
+					"1010" : ["0, 0"],
+					
+					"****" : ["1, 1"]
+				}
+				
+			},
+			"N" : {
+				"CollisionType" : 1,
+				"Palettes" : [0],
+				"Tileset" : "test",
+				"Connections" : ["N"],
+				"Mapping" : ["0, 1", "0, -1", "1, 0", "-1, 0"],
+				"TileMapping" : {
+					"****" : ["1, 1"]
+				}
+				
+			}
+		}
+	}
+}

@@ -1,0 +1,103 @@
+Game engine TODO:
+
+-- Physics (mostly done)
+	-- Need to finish porting rectangle checking (done)
+	-- Add entity collision
+-- Sprites (done)
+	-- Need support for animated sprites (done)
+	-- Affine Sprites (done)
+-- Particles (done)
+-- Entities (done)
+-- Backgrounds (done)
+	-- Finalize larger size backgrounds (done)
+-- Levels (mostly done)
+	-- Add more tilemapping options (done)
+	-- Add support for Tiled (program)
+	-- Support for bin/json files
+	-- Revamp the level loading code.
+		-- Maybe combine collision and tilemap rendering into one data set
+		-- Allow loading sections of a room for open world
+		-- Add loading multiple levels at once.
+			-- Load in the collision and visual data for each level, then save the entity pointers.
+			
+-- UI?
+-- Camera controlling (done)
+-- Background Scrolling (half done)
+	-- Still need to add support for multi positional backgrounds (stuff like clouds on the same layer and stuff)
+-- Intro cards	
+-- Input (done)
+-- Transitions
+	-- Add "Run Routine On Fade" function
+-- Music
+-- Sound effects
+
+
+
+
+
+Compiler TODO:
+-- Improve the Art compiling
+	-- Have a way to import tilesets/sprites through "import palettes"
+
+
+Compiler pseudo:
+	Parse Visual Pack data
+	Finalize Tileset mapping
+	Read all the levels used in each pack.  Used to 
+	foreach Visual Pack:
+		Compile each level.  Take note of each sprite tile used.
+		
+	Compile Sprites
+
+
+
+
+Editor TODO:
+-- Implement the compiler. (done)
+-- Implement project templates (done)
+-- Create the project format (half done)
+	-- Actually figure out what data to put in here
+-- Add multiple control windows for different functions, and different functionality (like blender or unity)
+-- Add breakpoints for VSCode maybe? (assuming that's possible)
+-- Create debug code for the source for the editor to add functionality
+-- Add new panels:
+	-- Level Editor.
+		-- Include modes for editing the tilemap and the entities
+	-- Tilemapping Editor
+	-- Sprite Editor
+	-- Palette Editor
+	-- Entity Editor
+-- Update rom/editor when assets edited outside of the editor
+-- Allow users to designate certain tiles in a levelpack as part of a single array
+	
+
+Possible ideas:
+-- Create custom name parsers for art/level arrays
+
+Level loading workflow:
+
+- What I want:
+-- Levels can be loaded in all at once in memory
+-- Each level contained in memory would hold it's width/height (as bytes), then the collision data, and then a pointer to where in rom the entity data is.
+-- Each entity would also have a new integer tied to it.  The first byte would say which level it was loaded from, and the second would say which entity it is in that level, in order of loading
+-- You can set an entity to be unable to load by putting it's uuid into a "don't load entity" array
+
+
+- Basic code I need:
+
+int dont_load[128];
+
+int engine_flags;
+#define LOADING_ASYNC_FLAG ???
+
+int LoadEntity(unsigned int* actor_index, unsigned char* data, char dont_load);
+
+// Both will start loading the level pack picked.
+// Loading async will force the loader to run while the game is still running.
+// Loading normally will fade to black, then load until all levels are loaded.  It will also shut down any music or sfx playing
+void LoadLevelPack(unsigned int* level_pack, int section);
+void LoadLevelPackAsync(unsigned int* level_pack);
+
+// Move engine to new level.  Section should only be 0 or 1
+void MoveToLevel(int level, int section);
+

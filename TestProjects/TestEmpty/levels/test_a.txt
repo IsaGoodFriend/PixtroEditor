@@ -1,0 +1,32 @@
+34 - 22 - 1
+
+layer
+MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+MM                            MMMM
+MM                            MMMM
+MM                            MMMM
+MMMMMMMMMMMMMMMMMM            MMMM
+MMMMMMMMMMMMMMMMMM            MMMM
+MMMMMMMMMMMMMMMMMM            MMMM
+MMMMMMMMMMMMMMMMMM            MMMM
+MMMM                          MMMM
+MMMM                          MMMM
+MMMM                          MMMM
+MMMM                          MMMM
+MMMM                          MMMM
+MMMM                       MMMMMMM
+MMMM                       MMMMMMM
+MMMM                    MMMMMMMMMM
+MMMM                    MMMMMMMMMM
+MMMM                    MMMMMMMMMM
+MMMM                    MMMMMMMMMM
+MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+
+entities
+
+char; 3; 3
+
+end

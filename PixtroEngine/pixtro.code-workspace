@@ -1,0 +1,28 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"**/.git": true,
+			"**/.svn": true,
+			"**/.hg": true,
+			"**/CVS": true,
+			"**/.DS_Store": true,
+			"**/build": true,
+			"**/sprites.*": true,
+			"**/levels.*": true,
+			"*.elf": true,
+			"*.gba": true
+		},
+		"files.associations": {
+			"type_traits": "cpp",
+			"xtr1common": "cpp",
+			"utility": "cpp",
+			"typeinfo": "cpp",
+			"xutility": "c"
+		}
+	}
+}
