@@ -4,6 +4,7 @@ using Monocle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Pixtro.Editor;
+using Pixtro.UI;
 
 namespace Pixtro.Scenes {
 	public enum LevelEditorStates {
@@ -30,6 +31,9 @@ namespace Pixtro.Scenes {
 			testTileset = new Tileset(Atlases.EngineGraphics["test tileset"], 8, 8);
 
 			baseState = LevelEditorStates.Draw;
+
+			OnMouseDown += MouseDown;
+			OnMouseUp += MouseUp;
 		}
 
 		public void Extend(int left, int right, int up, int down) {
@@ -84,26 +88,26 @@ namespace Pixtro.Scenes {
 			visualGrid.Position = Vector2.Zero;
 		}
 
-		private void OnMouseDown(int x, int y, bool newScene) {
+		private void MouseDown(int x, int y, bool newScene) {
 			if (MInput.Keyboard.Check(Keys.Space)) {
 				heldState = LevelEditorStates.Pan;
-				Engine.OnMouseDrag += MouseDragged;
+				OnMouseDrag += MouseDragged;
 				return;
 			}
 			if (newScene)
 				return;
 
-			Engine.OnMouseDrag += MouseDragged;
+			OnMouseDrag += MouseDragged;
 
 			SetTile(MInput.Mouse.Position, 1);
 		}
 
-		private void OnMouseUp(int x, int y) {
+		private void MouseUp(int x, int y, bool newScene) {
 			heldState = LevelEditorStates.None;
-			Engine.OnMouseDrag -= MouseDragged;
+			OnMouseDrag -= MouseDragged;
 		}
 
-		private void MouseDragged(int x, int y) {
+		private void MouseDragged(int x, int y, bool newScene) {
 
 			var state = baseState;
 			if (heldState != LevelEditorStates.None) {
@@ -122,6 +126,7 @@ namespace Pixtro.Scenes {
 
 		}
 
+		#region Set Tiles
 		public void SetTile(int x, int y, int value) {
 			if (x < 0 || y < 0 || x >= rawTilemap.Columns || y >= rawTilemap.Rows) {
 				return;
@@ -169,6 +174,12 @@ namespace Pixtro.Scenes {
 				new Point((int)(end.X / TileSize), (int)(end.Y / TileSize)), value);
 		}
 
+		#endregion
+
+		public override void Begin() {
+			base.Begin();
+		}
+
 		public override void FocusedUpdate() {
 			base.FocusedUpdate();
 
@@ -193,17 +204,6 @@ namespace Pixtro.Scenes {
 
 				Camera.Position += (new Vector2(VisualBounds.X, VisualBounds.Y) - MInput.Mouse.Position) / Camera.Zoom;
 			}
-		}
-
-		public override void GainFocus() {
-			base.GainFocus();
-			Engine.OnMouseDown += OnMouseDown;
-			Engine.OnMouseUp += OnMouseUp;
-		}
-
-		public override void LoseFocus() {
-			base.LoseFocus();
-			Engine.OnMouseDown -= OnMouseDown;
 		}
 
 		public override void DrawGraphics() {

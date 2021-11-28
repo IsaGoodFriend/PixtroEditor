@@ -7,6 +7,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime;
 using Pixtro.Projects;
+using Pixtro.UI;
 using Pixtro.Editor;
 using Microsoft.Xna.Framework.Input;
 
@@ -58,11 +59,11 @@ namespace Monocle {
 
 		public static string ContentDirectory {
 #if PS4
-            get { return Path.Combine("/app0/", Instance.Content.RootDirectory); }
+			get { return Path.Combine("/app0/", Instance.Content.RootDirectory); }
 #elif NSWITCH
-            get { return Path.Combine("rom:/", Instance.Content.RootDirectory); }
+			get { return Path.Combine("rom:/", Instance.Content.RootDirectory); }
 #elif XBOXONE
-            get { return Instance.Content.RootDirectory; }
+			get { return Instance.Content.RootDirectory; }
 #else
 			get { return Path.Combine(AssemblyDirectory, Instance.Content.RootDirectory); }
 #endif
@@ -71,13 +72,12 @@ namespace Monocle {
 		// scenes and layout
 		private Scene activeScene;
 		private WindowRenderer fullRenderer;
+		private bool sceneChanged = false;
 
 		// util
 		public static Color ClearColor;
-		public static bool ExitOnEscapeKeypress;
 
-		public static event Action<int, int, bool> OnMouseDown;
-		public static event Action<int, int> OnMouseDrag, OnMouseUp;
+		public static event Action<int, int> OnMouseDown, OnMouseDrag, OnMouseUp;
 
 		public static float UpdateFrameData;
 
@@ -99,11 +99,11 @@ namespace Monocle {
 			Graphics.PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8;
 
 #if PS4 || XBOXONE
-            Graphics.PreferredBackBufferWidth = 1920;
-            Graphics.PreferredBackBufferHeight = 1080;
+			Graphics.PreferredBackBufferWidth = 1920;
+			Graphics.PreferredBackBufferHeight = 1080;
 #elif NSWITCH
-            Graphics.PreferredBackBufferWidth = 1280;
-            Graphics.PreferredBackBufferHeight = 720;
+			Graphics.PreferredBackBufferWidth = 1280;
+			Graphics.PreferredBackBufferHeight = 720;
 #else
 			Window.AllowUserResizing = true;
 			Window.ClientSizeChanged += OnClientSizeChanged;
@@ -124,7 +124,6 @@ namespace Monocle {
 
 			IsMouseVisible = false;
 			IsFixedTimeStep = false;
-			ExitOnEscapeKeypress = true;
 
 			GCSettings.LatencyMode = GCLatencyMode.LowLatency;
 		}
@@ -200,59 +199,51 @@ namespace Monocle {
 
 		protected override void Update(GameTime gameTime) {
 
+			if (activeScene == null) {
+				SetActiveScene(new Vector2(0, EditorWindow.TOP_MENU_BAR + 1));
+			}
+
+			Scene previousScene = activeScene;
+
 			RawDeltaTime = 1 / 60.0f;
-			
 			DeltaTime = RawDeltaTime * TimeRate;
-
 			DeltaTimeRate = DeltaTime * 60;
-
 			TimeAlive += RawDeltaTime;
 
 			//Update input
 			MInput.Update();
-
-			Pixtro.UI.UIFramework.Update();
-
-			var item = Layout.GetElementAt(new System.Drawing.Point((int)MInput.Mouse.X, (int)MInput.Mouse.Y));
-
-			if (MInput.Mouse.WasMoved) {
-
-				if (item is EditorLayout.LayoutSplit) {
-					Mouse.SetCursor(MouseCursor.SizeWE);
-				}
-				else {
-					Mouse.SetCursor(MouseCursor.Arrow);
-				}
-			}
-
-			if (OnMouseDown != null && MInput.Mouse.PressedLeftButton) {
-
-				var prevScene = activeScene;
-				SetActiveScene(MInput.Mouse.Position);
-
-				OnMouseDown((int)MInput.Mouse.X, (int)MInput.Mouse.Y, activeScene != prevScene);
-			}
-			if (OnMouseDrag != null && MInput.Mouse.CheckLeftButton && !MInput.Mouse.PressedLeftButton && MInput.Mouse.WasMoved)
-				OnMouseDrag((int)MInput.Mouse.X, (int)MInput.Mouse.Y);
-			if (OnMouseUp != null && MInput.Mouse.ReleasedLeftButton)
-				OnMouseUp((int)MInput.Mouse.X, (int)MInput.Mouse.Y);
-			
-
-#if !CONSOLE
-			if (ExitOnEscapeKeypress && MInput.Keyboard.Pressed(Microsoft.Xna.Framework.Input.Keys.Escape)) {
-				Exit();
-				return;
-			}
-#endif
-
-			if (activeScene == null) {
-				SetActiveScene(new Vector2(0, EditorWindow.TOP_MENU_BAR + 1));
-			}
+			// Update UI
+			UIFramework.Update();
 
 			if (OverloadGameLoop != null) {
 				OverloadGameLoop();
 				base.Update(gameTime);
 				return;
+			}
+
+			// Get the current layout element under the mouse
+			var item = Layout.GetElementAt(new System.Drawing.Point((int)MInput.Mouse.X, (int)MInput.Mouse.Y));
+
+			if (MInput.Mouse.PressedLeftButton) {
+				SetActiveScene(MInput.Mouse.Position);
+				if (activeScene != previousScene)
+					sceneChanged = true;
+			}
+			if (MInput.Mouse.ReleasedLeftButton) {
+				sceneChanged = false;
+			}
+
+			if (UIFramework.SelectedControl == null) {
+
+				if (OnMouseDown != null && MInput.Mouse.PressedLeftButton)
+					OnMouseDown((int)MInput.Mouse.X, (int)MInput.Mouse.Y);
+				if (OnMouseDrag != null && MInput.Mouse.CheckLeftButton && !MInput.Mouse.PressedLeftButton && MInput.Mouse.WasMoved)
+					OnMouseDrag((int)MInput.Mouse.X, (int)MInput.Mouse.Y);
+				if (OnMouseUp != null && MInput.Mouse.ReleasedLeftButton)
+					OnMouseUp((int)MInput.Mouse.X, (int)MInput.Mouse.Y);
+
+				if (!EditorLayout.Resizing)
+					activeScene.UpdateMouse(sceneChanged);
 			}
 
 			foreach (var window in Layout)
@@ -317,6 +308,7 @@ namespace Monocle {
 
 			fullRenderer.Render(null);
 			fullRenderer.AfterRender(null);
+
 		}
 
 		protected override void OnExiting(object sender, EventArgs args) {

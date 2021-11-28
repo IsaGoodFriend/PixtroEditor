@@ -21,6 +21,8 @@ namespace Pixtro.Editor {
 			//Render everything on a moving camera
 			Draw.SpriteBatch.Begin(SpriteSortMode.FrontToBack, Blending, Sampling, DepthStencilState.DepthRead, RasterizerState.CullNone, null, Matrix.Identity);
 
+			Draw.Depth = Draw.CLOSEST_DEPTH - 10;
+
 			foreach (var split in Engine.GetWindowSplits()) {
 				Rectangle rect = new Rectangle(
 					split.Item1.BoundingRect.X, split.Item1.BoundingRect.Y,
@@ -37,9 +39,16 @@ namespace Pixtro.Editor {
 
 				Draw.Rect(rect, ColorSchemes.CurrentScheme.Separation);
 			}
-
 			Draw.Rect(0, EditorWindow.TOP_MENU_BAR - 2, Engine.ViewWidth, 2, ColorSchemes.CurrentScheme.Separation);
 			Draw.Rect(0, Engine.ViewHeight - EditorWindow.BOTTOM_MENU_BAR, Engine.ViewWidth, 2, ColorSchemes.CurrentScheme.Separation);
+
+
+			Draw.Depth = Draw.FARTHEST_DEPTH;
+
+			Draw.Rect(0, 0, Engine.ViewWidth, EditorWindow.TOP_MENU_BAR, ColorSchemes.CurrentScheme.MenuBar);
+			Draw.Rect(0, Engine.ViewHeight - EditorWindow.BOTTOM_MENU_BAR, Engine.ViewWidth, EditorWindow.BOTTOM_MENU_BAR, ColorSchemes.CurrentScheme.MenuBar);
+
+			UI.UIFramework.Render();
 
 			Draw.SpriteBatch.End();
 		}

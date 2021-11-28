@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using System.IO;
 using System;
 using Pixtro.Emulation;
+using Pixtro.UI;
 using System.Reflection;
 using System.Timers;
 using Monocle;
@@ -27,6 +28,18 @@ namespace Pixtro.Editor {
 			base.Initialize();
 
 			EmulationHandler.SetController(new MonoGameController());
+			var tempButton = new BarButton("File");
+			tempButton.CreateDropdown = () => {
+				return new Dropdown(
+				("New Project", () => { }),
+				("Open Project", () => { }),
+				("Save Project", () => { }),
+				("----", null),
+				("Test Project", () => { }),
+				("Exit", Exit)
+				);
+			};
+			UIFramework.AddControl(tempButton);
 		}
 
 		protected override void LoadContent() {

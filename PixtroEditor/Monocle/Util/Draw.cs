@@ -390,10 +390,13 @@ namespace Monocle {
 
 		#region Text
 
+		public static Vector2 MeasureText(string text, int size = DEFAULT_TEXT_SIZE, SpriteFont font = null) {
+			font = font ?? DefaultFont;
+			return font.MeasureString(text) * size / DEFAULTFONT_SIZE;
+		}
 		public static void Text(string text, Vector2 position, Color color, SpriteFont font = null, int size = DEFAULT_TEXT_SIZE, int _depthOffset = 0) {
 			SpriteBatch.DrawString(font??DefaultFont, text, Calc.Floor(position), color, 0, Vector2.Zero, size / DEFAULTFONT_SIZE, SpriteEffects.None, RealDepth + (_depthOffset * SB_DEPTH_DIV));
 		}
-
 		public static void Text(string text, Vector2 position, Color color, Vector2 origin, Vector2 scale, float rotation, SpriteFont font = null, int size = DEFAULT_TEXT_SIZE, int _depthOffset = 0) {
 			SpriteBatch.DrawString(font??DefaultFont, text, Calc.Floor(position), color, rotation, origin, scale * (size / DEFAULTFONT_SIZE), SpriteEffects.None, RealDepth + (_depthOffset * SB_DEPTH_DIV));
 		}
@@ -436,13 +439,14 @@ namespace Monocle {
 			SpriteBatch.DrawString(font, text, Calc.Floor(position), color, 0, origin, scale, SpriteEffects.None, RealDepth);
 		}
 
-		public static void TextCentered(string text, Vector2 position, SpriteFont font, int _depthOffset = 0) {
+		public static void TextCentered(string text, Vector2 position, SpriteFont font = null, int _depthOffset = 0) {
 			font = font??DefaultFont;
 			Text(text, position - font.MeasureString(text) * .5f, Color.White, font, _depthOffset: _depthOffset);
 		}
 
-		public static void TextCentered(SpriteFont font, string text, Vector2 position, Color color, int _depthOffset = 0) {
-			Text(text, position - font.MeasureString(text) * .5f, color, font, _depthOffset: _depthOffset);
+		public static void TextCentered(string text, Vector2 position, Color color, SpriteFont font = null, int _depthOffset = 0) {
+			font = font??DefaultFont;
+			Text(text, position - MeasureText(text, font: font) * .5f, color, font, _depthOffset: _depthOffset);
 		}
 
 		public static void TextCentered(string text, Vector2 position, Color color, float scale, float rotation, SpriteFont font = null) {

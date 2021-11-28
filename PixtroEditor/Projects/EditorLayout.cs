@@ -11,6 +11,7 @@ namespace Pixtro.Editor
 {
 	public sealed class EditorLayout : IEnumerable<EditorLayout.LayoutWindow>
 	{
+		public static bool Resizing { get; private set; }
 		public enum SplitDirection
 		{
 			None,
@@ -29,6 +30,7 @@ namespace Pixtro.Editor
 		public class LayoutSplit : ILayoutInfo
 		{
 			public const int SPLIT_PIXEL_SIZE = 2;
+			public const int SPLIT_LEEWAY = 3;
 
 			public SplitDirection Direction = SplitDirection.Horizontal;
 			public float SplitPercent { get => split;
@@ -159,9 +161,7 @@ namespace Pixtro.Editor
 			{
 			}
 			public LayoutWindow(Scene scene) {
-				RootScene = scene;
-				scene.EditorLayout = this;
-				scene.OnSetWindow(this);
+				ChangeRootScene(scene);
 			}
 
 			public Size MinimumSize()
@@ -177,9 +177,14 @@ namespace Pixtro.Editor
 			}
 
 			public void ChangeRootScene(Scene newScene) {
+				if (RootScene != null)
+					RootScene.End();
+
 				RootScene = newScene;
 				newScene.EditorLayout = this;
 				newScene.OnSetWindow(this);
+
+				newScene.Begin();
 			}
 		}
 
@@ -201,21 +206,25 @@ namespace Pixtro.Editor
 			var window = GetWindow(0b10);
 			window.ChangeRootScene(new Scenes.ConsoleScene());
 
-			Engine.OnMouseDown += Engine_OnMouseDown;
+			Engine.OnMouseDown += MouseDown;
 			Engine.ResizeEnd += OnResize;
 		}
 
-		private void Engine_OnMouseDown(int x, int y, bool newScene) {
+		private void MouseDown(int x, int y) {
 			var item = GetElementAt(new Point(x, y));
 
 			if (item != null && item is LayoutSplit) {
 				adjustingLayout = item as LayoutSplit;
 
+				Resizing = true;
 				Engine.OnMouseDrag += MouseDrag;
-				Engine.OnMouseUp += (x, y) => {
-					Engine.OnMouseDrag -= MouseDrag;
-				};
+				Engine.OnMouseUp += MouseUp;
 			}
+		}
+
+		private void MouseUp(int x, int y) {
+			Engine.OnMouseDrag -= MouseDrag;
+			Resizing = false;
 		}
 
 		private void MouseDrag(int x, int y) {
@@ -290,13 +299,25 @@ namespace Pixtro.Editor
 			{
 				LayoutSplit split = info as LayoutSplit;
 
-				info = null;
+				Rectangle rect1 = split.Item1.BoundingRect;
+				Rectangle rect2 = split.Item2.BoundingRect;
 
-				if (split.Item1.BoundingRect.Contains(point))
+				if (split.Direction == SplitDirection.Horizontal) {
+					rect1.Width -= LayoutSplit.SPLIT_LEEWAY;
+					rect2.Width -= LayoutSplit.SPLIT_LEEWAY;
+					rect2.X += LayoutSplit.SPLIT_LEEWAY;
+				} 
+				else {
+					rect1.Height -= LayoutSplit.SPLIT_LEEWAY;
+					rect2.Height -= LayoutSplit.SPLIT_LEEWAY;
+					rect2.Y += LayoutSplit.SPLIT_LEEWAY;
+				}
+
+				if (rect1.Contains(point))
 				{
 					return GetElementAt(split.Item1, point);
 				}
-				else if (split.Item2.BoundingRect.Contains(point))
+				else if (rect2.Contains(point))
 				{
 					return GetElementAt(split.Item2, point);
 				}

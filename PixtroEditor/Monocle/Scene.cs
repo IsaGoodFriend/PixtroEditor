@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework.Graphics;
 using Pixtro.Editor;
+using Pixtro.UI;
 
 namespace Monocle {
 
@@ -24,6 +25,10 @@ namespace Monocle {
 		public Rectangle VisualBounds => new Rectangle(EditorLayout.BoundingRect.X, EditorLayout.BoundingRect.Y + EditorWindow.SUB_MENU_BAR, EditorLayout.BoundingRect.Width, EditorLayout.BoundingRect.Height - EditorWindow.SUB_MENU_BAR);
 
 		public event Action OnEndOfFrame;
+
+		public event Action<int, int, bool> OnMouseDown, OnMouseDrag, OnMouseUp;
+
+		private SceneBounds uiBounds;
 		
 
 		public Scene() {
@@ -37,12 +42,23 @@ namespace Monocle {
 			Entities.Add(HelperEntity);
 
 			Add(Renderer = new SceneRenderer(this));
+
+			UIFramework.AddControl(uiBounds = new SceneBounds(this));
+		}
+
+		public void UpdateMouse(bool sceneNew) {
+
+			if (OnMouseDown != null && MInput.Mouse.PressedLeftButton)
+				OnMouseDown((int)MInput.Mouse.X, (int)MInput.Mouse.Y, sceneNew);
+			if (OnMouseDrag != null && MInput.Mouse.CheckLeftButton && !MInput.Mouse.PressedLeftButton && MInput.Mouse.WasMoved)
+				OnMouseDrag((int)MInput.Mouse.X, (int)MInput.Mouse.Y, sceneNew);
+			if (OnMouseUp != null && MInput.Mouse.ReleasedLeftButton)
+				OnMouseUp((int)MInput.Mouse.X, (int)MInput.Mouse.Y, sceneNew);
 		}
 
 		public virtual void OnSetWindow(EditorLayout.LayoutWindow window) { }
 
 		public virtual void Begin() {
-			Focused = true;
 			foreach (var entity in Entities)
 				entity.SceneBegin(this);
 		}
@@ -51,6 +67,8 @@ namespace Monocle {
 			Focused = false;
 			foreach (var entity in Entities)
 				entity.SceneEnd(this);
+
+			UIFramework.RemoveControl(uiBounds);
 		}
 
 		public virtual void BeforeUpdate() {
