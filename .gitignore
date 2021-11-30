@@ -2,6 +2,7 @@
 **/.vscode/
 **/bin/**
 **/obj/**
+**/build/**
 
 /PixtroEditor/Assets/dll/**
 /PixtroEditor/packages/**

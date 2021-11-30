@@ -36,8 +36,10 @@ extern int drawing_flags;
 
 extern int cam_x, cam_y;
 
-void load_sprite(unsigned int *sprite, int index, int shape);
-void load_anim_sprite(unsigned int *sprites, int index, int shape, int frames, int speed);
+int load_sprite(unsigned int *sprite, int shape);
+int load_anim_sprite(unsigned int *sprites, int shape, int frames, int speed);
+void load_sprite_at(unsigned int *sprite, int index, int shape);
+void load_anim_sprite_at(unsigned int *sprites, int index, int shape, int frames, int speed);
 void load_obj_pal(unsigned short *pal, int palIndex);
 void load_bg_pal(unsigned short *pal, int palIndex);
 

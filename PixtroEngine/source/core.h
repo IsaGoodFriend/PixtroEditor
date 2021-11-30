@@ -1,10 +1,7 @@
 #pragma once
-
 #include "tonc_vscode.h"
-#include <string.h>
 
 #include "engine.h"
-#include "coroutine.h"
 
 // ---- Entities ----
 // The basic entity structure.
@@ -33,11 +30,12 @@ typedef struct
 // If enabled, this entity will update as normal
 #define ACTIVE
 
-#define ENT_PERSISTENT_FLAG 0x00000001
-#define ENT_ACTIVE_FLAG 0x00000002
-#define ENT_VISIBLE_FLAG 0x00000004
-#define ENT_DETECT_FLAG 0x00000008
-#define ENT_COLLIDE_FLAG 0x00000010
+#define ENT_LOADED_FLAG 0x00000001
+#define ENT_PERSISTENT_FLAG 0x00000002
+#define ENT_ACTIVE_FLAG 0x00000004
+#define ENT_VISIBLE_FLAG 0x00000008
+#define ENT_DETECT_FLAG 0x00000010
+#define ENT_COLLIDE_FLAG 0x00000011
 
 #define LOAD_ENTITY(name, i)           \
 	entity_inits[i] = &name##_init;    \
@@ -48,8 +46,8 @@ extern unsigned int max_entities;
 
 extern int (*entity_inits[32])(unsigned int actor_index, unsigned char *data, unsigned char *is_loading);
 extern Entity entities[ENTITY_LIMIT];
-extern void (*entity_update[32])(int index);
-extern void (*entity_render[32])(int index);
+extern void (*entity_update[32])(unsigned int index);
+extern void (*entity_render[32])(unsigned int index);
 
 // ---- LAYERS ----
 // Layer struct
@@ -93,8 +91,7 @@ extern unsigned int engine_flags;
 
 #define GAME_DFLAG_WAITING 0x00000001
 
-#define ENG_DFLAG_READY 0x00000001
-#define ENG_DFLAG_PAUSE_UPDATES 0x00000002
+#define ENG_DFLAG_PAUSE_UPDATES 0x00000001
 
 extern unsigned int debug_engine_flags, debug_game_flags;
 #define ENGINE_DEBUGFLAG(name) (debug_engine_flags & ENG_DFLAG_##name)

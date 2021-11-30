@@ -91,16 +91,43 @@ char is_rendering;
 
 extern void load_tiletypes(unsigned int *coll_data);
 
-void load_sprite(unsigned int *sprite, int index, int shape)
+int load_sprite(unsigned int *sprite, int shape)
 {
+	int value = 0;
 
-	anim_bank[index] = NULL;
+	for (; value < BANK_LIMIT; ++value)
+	{
+		if (shapes[value] == -1)
+		{
+			load_sprite_at(sprite, value, shape);
+			return value;
+		}
+	}
+	return -1;
+}
+int load_anim_sprite(unsigned int *sprites, int shape, int frames, int speed)
+{
+	int value = 0;
 
+	for (; value < BANK_LIMIT; ++value)
+	{
+		if (indexes[value] == NULL)
+		{
+			load_anim_sprite_at(sprites, value, shape, frames, speed);
+			return value;
+		}
+	}
+	return -1;
+}
+void load_sprite_at(unsigned int *sprite, int index, int shape)
+{
 	if (!is_rendering)
 	{
 		wait_to_load[index] = ((unsigned int)sprite) | (shape << 28);
 		return;
 	}
+
+	anim_bank[index] = NULL;
 
 	int bankLoc, size = shape2size[shape];
 
@@ -162,9 +189,9 @@ void load_sprite(unsigned int *sprite, int index, int shape)
 
 	memcpy(&tile_mem[4][bankLoc], sprite, size);
 }
-void load_anim_sprite(unsigned int *sprites, int index, int shape, int frames, int speed)
+void load_anim_sprite_at(unsigned int *sprites, int index, int shape, int frames, int speed)
 {
-	load_sprite(sprites, index, shape);
+	load_sprite_at(sprites, index, shape);
 
 	anim_bank[index] = sprites;
 
@@ -181,6 +208,12 @@ void load_anim_sprite(unsigned int *sprites, int index, int shape, int frames, i
 
 	anim_meta[index] |= shape << 16;
 }
+
+void unload_sprite(int index)
+{
+	shapes[index] = -1;
+}
+
 #ifdef LARGE_TILES
 void load_tileset(unsigned int *tiles, unsigned short *mapping, unsigned int *collision, int count)
 {
@@ -221,6 +254,9 @@ void draw_affine_big(AffineMatrix matrix, int sprite, int prio, int pal)
 
 	int shape = shapes[sprite];
 
+	if (shape == -1)
+		return;
+
 	x -= shape_width[shape];
 	y -= shape_height[shape];
 
@@ -251,7 +287,6 @@ void draw_affine_big(AffineMatrix matrix, int sprite, int prio, int pal)
 }
 void draw_affine(AffineMatrix matrix, int sprite, int prio, int pal)
 {
-
 	if (affine_count == 32)
 		return;
 
@@ -266,6 +301,9 @@ void draw_affine(AffineMatrix matrix, int sprite, int prio, int pal)
 	}
 
 	int shape = shapes[sprite];
+
+	if (shape == -1)
+		return;
 
 	x -= shape_width[shape] >> 1;
 	y -= shape_height[shape] >> 1;
@@ -297,7 +335,6 @@ void draw_affine(AffineMatrix matrix, int sprite, int prio, int pal)
 }
 void draw(int x, int y, int sprite, int flip, int prio, int pal)
 {
-
 	x = FIXED2INT(x);
 	y = FIXED2INT(y);
 
@@ -308,6 +345,9 @@ void draw(int x, int y, int sprite, int flip, int prio, int pal)
 	}
 
 	int shape = shapes[sprite];
+
+	if (shape == -1)
+		return;
 
 	if (x + shape_width[shape] <= 0 || x > 240 ||
 		y + shape_height[shape] <= 0 || y > 160)
@@ -322,6 +362,24 @@ void draw(int x, int y, int sprite, int flip, int prio, int pal)
 	++sprite_count;
 }
 
+void init_drawing()
+{
+	is_rendering = 0;
+
+	oam_init(obj_buffer, SPRITE_LIMIT);
+	sprite_pointer = (OBJ_ATTR *)&obj_buffer;
+	int i;
+
+	indexes[0] = BANK_MEM_START;
+	shapes[0] = -1;
+	for (i = 1; i < BANK_LIMIT; ++i)
+	{
+		indexes[i] = 0x8000;
+		ordered[i] = i;
+		shapes[i] = -1;
+	}
+}
+
 void begin_drawing()
 {
 	is_rendering = 1;
@@ -332,7 +390,7 @@ void begin_drawing()
 	{
 		if (wait_to_load[i])
 		{
-			load_sprite(wait_to_load[i] & 0x0FFFFFFF, i, (wait_to_load[i] >> 28));
+			load_sprite_at(wait_to_load[i] & 0x0FFFFFFF, i, (wait_to_load[i] >> 28));
 
 			wait_to_load[i] = 0;
 		}
@@ -366,28 +424,10 @@ void begin_drawing()
 			int offset = (anim_meta[i] & 0xF00) >> 8;
 			int shape = (anim_meta[i] & 0xF0000) >> 16;
 
-			load_sprite(&anim_bank[i][(offset * (shape2size[shape] >> 2))], i, shape);
+			load_sprite_at(&anim_bank[i][(offset * (shape2size[shape] >> 2))], i, shape);
 
 			anim_bank[i] = ptr;
 		}
-	}
-}
-
-void init_drawing()
-{
-	is_rendering = 0;
-
-	oam_init(obj_buffer, SPRITE_LIMIT);
-	sprite_pointer = (OBJ_ATTR *)&obj_buffer;
-	int i;
-
-	indexes[0] = BANK_MEM_START;
-	shapes[0] = -1;
-	for (i = 1; i < BANK_LIMIT; ++i)
-	{
-		indexes[i] = 0x8000;
-		ordered[i] = i;
-		shapes[i] = -1;
 	}
 }
 void end_drawing()

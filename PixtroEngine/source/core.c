@@ -1,13 +1,12 @@
-#include "tonc_vscode.h"
 #include <string.h>
 
 #include "core.h"
-
 #include "graphics.h"
 #include "load_data.h"
 #include "math.h"
 #include "physics.h"
 #include "loading.h"
+#include "coroutine.h"
 
 // Layers
 
@@ -32,8 +31,8 @@ unsigned int max_entities;
 
 int (*entity_inits[32])(unsigned int actor_index, unsigned char *data, unsigned char *is_loading);
 Entity entities[ENTITY_LIMIT];
-void (*entity_update[32])(int index);
-void (*entity_render[32])(int index);
+void (*entity_update[32])(unsigned int index);
+void (*entity_render[32])(unsigned int index);
 
 // Level data
 char level_meta[128];
@@ -133,6 +132,9 @@ void pixtro_update()
 	// Increment game's life counter
 	game_life++;
 
+	// Update inputs
+	update_presses();
+
 	if (fade_timer == 10)
 		fade_timer = 0;
 
@@ -155,16 +157,13 @@ void pixtro_update()
 	}
 	else
 	{
-		// Update inputs
-		update_presses();
-
 		// Update engine when not fading
 		if (!fade_timer)
 		{
 			// Run over every active entity and run it's custom update
 			for (i = 0; i < max_entities; ++i)
 			{
-				if (!ENT_FLAG(ACTIVE, i) || !entity_update[ENT_TYPE(i)])
+				if (!ENT_FLAG(ACTIVE, i) || !ENT_FLAG(LOADED, i) || !entity_update[ENT_TYPE(i)])
 					continue;
 
 				entity_update[ENT_TYPE(i)](i);
@@ -202,7 +201,7 @@ void pixtro_render()
 	// Render each visible entity
 	for (i = 0; i < max_entities; ++i)
 	{
-		if (!ENT_FLAG(VISIBLE, i) || !entity_render[ENT_TYPE(i)])
+		if (!ENT_FLAG(VISIBLE, i) || !ENT_FLAG(LOADED, i) || !entity_render[ENT_TYPE(i)])
 			continue;
 
 		SET_DRAWING_FLAG(CAM_FOLLOW);
@@ -438,6 +437,12 @@ void async_loading()
 	rt_step();
 
 	REMOVE_ENGINE_FLAG(LOADING_ASYNC);
+
+	if (level_loading < 63)
+	{
+		level_loading++;
+		loaded_levels_a[level_loading] = NULL;
+	}
 
 	rt_end();
 }

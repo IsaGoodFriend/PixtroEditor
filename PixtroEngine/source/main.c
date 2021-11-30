@@ -21,24 +21,12 @@ int main()
 	// Initialize the game engine
 	pixtro_init();
 
-#ifdef __DEBUG__
-	SET_DEBUGFLAG(WAITING);
-#endif
-
 	// Enable all channels for audio (the music and sfx aren't loud enough otherwise. might look into that later)
 	REG_SNDDSCNT |= SDS_AR | SDS_AL | SDS_BR | SDS_BL;
 
 	// Game loop
 	while (1)
 	{
-#ifdef __DEBUG__
-		while (!ENGINE_DEBUGFLAG(READY))
-		{
-			mmFrame();
-			VBlankIntrWait();
-		}
-#endif
-
 		// Get input
 		key_poll();
 

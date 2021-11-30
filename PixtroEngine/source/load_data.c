@@ -83,6 +83,7 @@ void load_entities()
 {
 	tileset_data += 2;
 
+	// Clear level metadata
 	int index;
 	for (index = 0; index < 128; ++index)
 	{
@@ -91,6 +92,7 @@ void load_entities()
 
 	index = *tileset_data;
 
+	// Set level metadata
 	while (index != 0xFFFF)
 	{
 		tileset_data++;
@@ -107,7 +109,6 @@ void load_entities()
 	// unload entities
 	for (; index < ENTITY_LIMIT; ++index)
 	{
-
 		if (ENT_FLAG(PERSISTENT, index))
 		{
 			entities[max_entities] = entities[index];
@@ -140,30 +141,61 @@ void load_entities()
 
 		lvl_info += 2;
 
-		entities[max_entities].vel_x = 0;
-		entities[max_entities].vel_y = 0;
-
-		entities[max_entities].x = BLOCK2FIXED(x);
-		entities[max_entities].y = BLOCK2FIXED(y);
-		entities[max_entities].ID = type | (level_loading << 8);
-		entities[max_entities].flags[4] = ENT_VISIBLE_FLAG | ENT_ACTIVE_FLAG;
-
-		char is_loading = 1;
-
-		int i;
-		for (i = 0; i < 64; ++i)
-		{
-		}
-
-		if (entity_inits[type])
-			lvl_info += entity_inits[type](max_entities, lvl_info, &is_loading);
+		int is_loading = add_entity_local(x, y, type, max_entities);
 
 		if (is_loading)
 			++max_entities;
+		else
+			entities[max_entities].flags[4] &= ~ENT_LOADED_FLAG | ENT_ACTIVE_FLAG;
 
 		type = lvl_info[0];
 		lvl_info += 1;
 	}
+}
+
+int add_entity_local(int x, int y, int type, int ent)
+{
+	entities[ent].vel_x = 0;
+	entities[ent].vel_y = 0;
+
+	entities[ent].x = BLOCK2FIXED(x);
+	entities[ent].y = BLOCK2FIXED(y);
+	entities[ent].ID = type | (level_loading << 8);
+	entities[max_entities].flags[4] = ENT_LOADED_FLAG | ENT_VISIBLE_FLAG | ENT_ACTIVE_FLAG;
+
+	int is_loading = 1;
+
+	if (entity_inits[type])
+		lvl_info += entity_inits[type](max_entities, lvl_info, &is_loading);
+	else
+		entities[max_entities].flags[4] &= ~ENT_LOADED_FLAG | ENT_ACTIVE_FLAG;
+
+	return is_loading;
+}
+
+int add_entity(int x, int y, int type)
+{
+	int retval = -1;
+
+	unsigned char *ptr = lvl_info;
+	lvl_info = NULL;
+
+	int index = 0;
+	while (index < ENTITY_LIMIT)
+	{
+		if (!ENT_FLAG(LOADED, index))
+		{
+			retval = index;
+			add_entity_local(x, y, type, index);
+
+			if (max_entities <= index)
+				max_entities = index + 1;
+			break;
+		}
+	}
+
+	lvl_info = ptr;
+	return retval;
 }
 
 void protect_cam()
