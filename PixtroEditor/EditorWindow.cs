@@ -40,6 +40,8 @@ namespace Pixtro.Editor {
 				);
 			};
 			UIFramework.AddControl(tempButton);
+
+			//EmulationHandler.LoadGame("C:/Users/IsaGoodFriend/Downloads/BizHawk-2.5.0/roms/WarioLand4/WarioLand4Original.gba");
 		}
 
 		protected override void LoadContent() {

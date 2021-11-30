@@ -41,7 +41,10 @@ namespace Pixtro.Projects {
 		public static void BuildAndRun() {
 			BuildProject(false);
 			OnSuccessfulBuild += () => {
-				Emulation.EmulationHandler.LoadGame(Path.Combine(Directory.GetCurrentDirectory(), "dll/output.gba"));
+				Engine.OverloadGameLoop = () => {
+					Emulation.EmulationHandler.LoadGame(Path.Combine(Directory.GetCurrentDirectory(), "dll/output.gba"));
+					Engine.OverloadGameLoop = null;
+				};
 			};
 		}
 

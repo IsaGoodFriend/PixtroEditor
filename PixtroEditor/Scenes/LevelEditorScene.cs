@@ -218,7 +218,7 @@ namespace Pixtro.Scenes {
 					Camera.Zoom += MInput.Mouse.WheelDelta > 0 ? 1 : -1;
 				}
 
-				Camera.Zoom = Calc.Clamp(Camera.Zoom, 0.125f, 6);
+				Camera.Zoom = Calc.Clamp(Camera.Zoom, 0.25f, 8);
 
 				Camera.Position += (new Vector2(VisualBounds.X, VisualBounds.Y) - MInput.Mouse.Position) / Camera.Zoom;
 			}

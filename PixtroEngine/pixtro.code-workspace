@@ -22,7 +22,9 @@
 			"xtr1common": "cpp",
 			"utility": "cpp",
 			"typeinfo": "cpp",
-			"xutility": "c"
+			"xutility": "c",
+			"tonc_vscode.h": "c",
+			"math.h": "c"
 		}
 	}
 }

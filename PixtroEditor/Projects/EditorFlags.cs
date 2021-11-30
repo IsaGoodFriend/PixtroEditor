@@ -4,17 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pixtro.Editor
+namespace Pixtro.Emulation
 {
 	[Flags]
-	public enum BaseDebugFlags : uint
+	public enum EditorToGameFlags : uint
 	{
-		Ready = 0x1,
-		PauseUpdates = 0x2,
+		PauseUpdates = 0x1,
 	}
 	[Flags]
-	public enum GameDebugFlags : uint
+	public enum GameToEditorFlags : uint
 	{
-		Waiting = 0x1,
+		PrintLevelData = 0x1,
 	}
 }

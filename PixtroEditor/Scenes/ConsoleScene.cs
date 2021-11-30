@@ -7,7 +7,7 @@ namespace Pixtro.Scenes {
 	public class ConsoleScene : Scene {
 
 		static ConsoleScene() {
-			outputFile = new StreamWriter(File.Open("output.log", FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read));
+			outputFile = new StreamWriter(File.Open("output.log", FileMode.Create, FileAccess.Write, FileShare.Read));
 			outputFile.AutoFlush = true;
 		}
 
@@ -43,7 +43,7 @@ namespace Pixtro.Scenes {
 				if (ConsoleLines[index] == null)
 					break;
 
-				Draw.Text(ConsoleLines[index], new Vector2(0, i * LINE_SPACE - (LINE_SPACE + 4)), Color.White);
+				Draw.Text(ConsoleLines[index], new Vector2(0, i * LINE_SPACE - (LINE_SPACE * 3 + 4)), Color.White);
 			}
 		}
 	}

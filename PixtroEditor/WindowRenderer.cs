@@ -50,6 +50,12 @@ namespace Pixtro.Editor {
 
 			UI.UIFramework.Render();
 
+			if (Projects.ProjectInfo.Building) {
+
+				Draw.Depth = Draw.CLOSEST_DEPTH;
+				Draw.Rect(0, 0, Engine.ViewWidth, Engine.ViewHeight, Color.Black * 0.3f);
+			}
+
 			Draw.SpriteBatch.End();
 		}
 	}
