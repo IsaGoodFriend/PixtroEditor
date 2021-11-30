@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using Pixtro.Emulation.BufferExtensions;
 
 namespace Pixtro.Emulation
 {

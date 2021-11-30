@@ -3,8 +3,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 
-using Pixtro.Emulation.StringExtensions;
-
 #if EXE_PROJECT
 namespace EXE_PROJECT // Use a different namespace so the executable can still use this class' members without an implicit dependency on the Pixtro.Emulation library, and without resorting to code duplication.
 #else

@@ -1,8 +1,7 @@
 ﻿using System.IO;
 using System.Text;
 
-namespace Pixtro.Emulation.IOExtensions
-{
+namespace Pixtro.Emulation {
 	public static class IOExtensions
 	{
 		public static byte[] ReadAllBytes(this Stream stream)

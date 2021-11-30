@@ -265,62 +265,69 @@ namespace Pixtro.Emulation
 
 			while (!memoryMap.ReadLine().StartsWith("Allocating common symbols")) ;
 
-			string currentLine, nextLine = memoryMap.ReadLine();
+			string currentLine = memoryMap.ReadLine().Trim();
 
 			List<MemoryMap> mapList = new List<MemoryMap>();
 
 			do
 			{
-				currentLine = nextLine;
-				nextLine = memoryMap.ReadLine();
 
-				if (string.IsNullOrWhiteSpace(currentLine))
-					continue;
+				while (!currentLine.StartsWith(".bss.completed") && !currentLine.StartsWith("*(.rodata)")) {
+					currentLine = memoryMap.ReadLine().Trim();
 
-				string[] split = currentLine.Split(new char[]{ ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-				if (!split[0].StartsWith("0x0") || split.Length > 3 || split[1].StartsWith("0x"))
-					continue;
+					if (memoryMap.EndOfStream)
+						break;
+				}
 
-				int domain = int.Parse(split[0].Substring(11, 1));
-				int parsed = Convert.ToInt32(split[0].Substring(12, 6), 16);
+				if (memoryMap.EndOfStream)
+					break;
 
-				switch (split[0][11])
-				{
-					case '8':
-						string name = split[1];
+				do {
+					currentLine = memoryMap.ReadLine().Trim();
 
-						try
-						{
-							int otherAddr = Convert.ToInt32(nextLine.Substring(28, 6), 16);
-							
-							romMap.Add(name, new RomMapping(parsed, otherAddr - parsed));
-						}
-						catch { }
+					string[] split = currentLine.Split(new char[]{ ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+					if (split.Length == 1 || split[1].StartsWith("0x"))
 						continue;
+
+					int domain = int.Parse(split[0].Substring(11, 1));
+					int parsed = Convert.ToInt32(split[0].Substring(12, 6), 16);
+
+					switch (split[0][11]) {
+						case '8':
+							string name = split[1];
+
+							try {
+								int otherAddr = Convert.ToInt32(currentLine.Substring(12, 6), 16);
+
+								romMap.Add(name, new RomMapping(parsed, otherAddr - parsed));
+							}
+							catch { }
+							continue;
+					}
+
+
+					var propertyInfo = GetType().GetProperty(split[1], BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+					if (propertyInfo != null && propertyInfo.CustomAttributes.Where((item) => item.AttributeType == typeof(DontHotloadAttribute)).Count() != 0) {
+						propertyInfo = null;
+					}
+
+					if (propertyInfo != null) {
+						split = currentLine.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+						int otherAddr = Convert.ToInt32(split[0].Substring(12, 6), 16);
+
+						var mapped = new MemoryMap(domain, parsed, otherAddr - parsed);
+
+						mapList.Add(mapped);
+
+						propertyInfo.GetSetMethod(true).Invoke(this, new object[] { mapped });
+
+					}
+
 				}
-				
+				while (!currentLine.StartsWith("*") || currentLine.StartsWith("*fill*"));
 
-				var propertyInfo = GetType().GetProperty(split[1], BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-				if (propertyInfo != null && propertyInfo.CustomAttributes.Where((item) => item.AttributeType == typeof(DontHotloadAttribute)).Count() != 0)
-				{
-					propertyInfo = null;
-				}
-
-				if (propertyInfo != null)
-				{
-					split = nextLine.Split(new char[]{ ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-
-					int otherAddr = Convert.ToInt32(split[0].Substring(12, 6), 16);
-
-					var mapped = new MemoryMap(domain, parsed, otherAddr - parsed);
-
-					mapList.Add(mapped);
-
-					propertyInfo.GetSetMethod(true).Invoke(this, new object[] { mapped });
-
-				}
-
-			} while (!currentLine.Trim().StartsWith(".comment"));
+			} while (!memoryMap.EndOfStream);
 
 			mapList.Add(LevelRegion = new MemoryMap(EWRam_Address, 0x20000, 0x10000));
 			mapList.Add(Palettes = new MemoryMap(PalRam_Address, 0, 0x400));

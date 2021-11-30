@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading;
 
 using Pixtro.Emulation;
-using Pixtro.Emulation.BufferExtensions;
 
 namespace Pixtro.Emulation
 {

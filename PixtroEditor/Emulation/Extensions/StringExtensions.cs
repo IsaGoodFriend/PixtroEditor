@@ -1,8 +1,7 @@
 using System;
 using System.Linq;
 
-namespace Pixtro.Emulation.StringExtensions
-{
+namespace Pixtro.Emulation {
 	public static class StringExtensions
 	{
 		public static bool Contains(this string haystack, string needle, StringComparison comparisonType)

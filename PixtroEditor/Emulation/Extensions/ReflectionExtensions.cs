@@ -4,8 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
 
-namespace Pixtro.Emulation.ReflectionExtensions
-{
+namespace Pixtro.Emulation {
 	/// <summary>
 	/// Reflection based helper methods
 	/// </summary>

@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace Pixtro.Emulation.NumberExtensions
-{
+namespace Pixtro.Emulation {
 	public static class NumberExtensions
 	{
 		public static string ToHexString(this int n, int numDigits)

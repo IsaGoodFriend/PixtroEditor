@@ -1,8 +1,6 @@
 using System.IO;
 using System.Reflection;
 
-using Pixtro.Emulation.StringExtensions;
-
 namespace Pixtro.Emulation
 {
 	public static partial class VersionInfo

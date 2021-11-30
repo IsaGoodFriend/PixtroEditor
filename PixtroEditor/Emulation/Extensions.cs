@@ -5,10 +5,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-using Pixtro.Emulation;
-using Pixtro.Emulation.PathExtensions;
-using Pixtro.Emulation.StringExtensions;
-
 namespace Pixtro.Emulation
 {
 	public static class EmulatorExtensions

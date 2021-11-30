@@ -14,6 +14,8 @@ namespace Pixtro.Emulation {
 		private static IController humanController;
 		private static int[] buffer;
 
+		public static GameCommunicator Communication { get; private set; }
+
 		const int size = 240 * 160;
 
 		public static bool Focused = false, PlayUnfocused = false;
@@ -31,14 +33,26 @@ namespace Pixtro.Emulation {
 			humanController = controller;
 		}
 		public static void LoadGame(byte[] data) {
+			if (emulator != null)
+				emulator.Dispose();
+			emulator = null;
 			emulator = new MGBAHawk(data);
+
+			ApiManager.Restart(new BasicServiceProvider(emulator), null, emulator, new GameInfo() { });
+
+			using (var fs = File.Open(Path.Combine(Projects.ProjectInfo.CurrentProject.ProjectDirectory, "build", "output.map"), FileMode.Open))
+				Communication = new GameCommunicator(new StreamReader(fs));
+
+			ServiceInjector.UpdateServices(emulator.ServiceProvider, Communication);
+
+			Communication.RomLoaded();
 		}
 		public static void LoadGame(string path) {
-			emulator = new MGBAHawk(File.ReadAllBytes(path));
+			LoadGame(File.ReadAllBytes(path));
 		}
 		public static void ClearGame() {
-			emulator = null;
 			emulator.Dispose();
+			emulator = null;
 
 			if (buffer == null || buffer.Length != size) {
 				SetEmptyBuffer();
@@ -67,6 +81,10 @@ namespace Pixtro.Emulation {
 					buffer[i] &= ~0xFF00FF;
 					buffer[i] |= (val & 0xFF) << 16;
 					buffer[i] |= (val & 0xFF0000) >> 16;
+				}
+
+				if (Communication.debug_engine_flags.GetFlag(GameToEditorFlags.PrintLevelData)) {
+
 				}
 			}
 		}

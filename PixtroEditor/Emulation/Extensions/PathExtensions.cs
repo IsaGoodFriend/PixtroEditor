@@ -4,9 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Linq;
 
-using Pixtro.Emulation.StringExtensions;
-
-namespace Pixtro.Emulation.PathExtensions
+namespace Pixtro.Emulation
 {
 	public static partial class PathExtensions
 	{
@@ -59,7 +57,7 @@ namespace Pixtro.Emulation.PathExtensions
 		/// <remarks>that means it may return <see langword="true"/> for invalid paths</remarks>
 		/// <seealso cref="IsAbsolute"/>
 		public static bool IsRelative(this string path) => !path.IsAbsolute();
-
+		
 		/// <returns>the absolute path equivalent to <paramref name="path"/> which contains <c>%exe%</c> (expanded) as a prefix</returns>
 		/// <remarks>
 		/// returned string omits trailing slash<br/>

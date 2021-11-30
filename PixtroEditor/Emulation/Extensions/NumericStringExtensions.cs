@@ -1,7 +1,7 @@
 using System.Linq;
 using System.Text;
 
-namespace Pixtro.Emulation.StringExtensions
+namespace Pixtro.Emulation
 {
 	/// <remarks>TODO how many of these methods can be replaced with <see cref="int.TryParse(string,out int)">int.TryParse</see> or similar? --yoshi</remarks>
 	public static class NumericStringExtensions

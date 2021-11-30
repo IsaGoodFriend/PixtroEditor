@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Pixtro.Emulation.CollectionExtensions
-{
+namespace Pixtro.Emulation {
 	public static class CollectionExtensions
 	{
 		public static IOrderedEnumerable<TSource> OrderBy<TSource, TKey>(
