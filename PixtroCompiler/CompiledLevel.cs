@@ -195,6 +195,8 @@ namespace Pixtro.Compiler {
 		}
 
 		public void AddLine(int layer, int line, string data) {
+			if (layer >= layers)
+				return;
 			for (int i = 0; i < width; ++i) {
 				levelData[layer, i, line] = data[i];
 			}

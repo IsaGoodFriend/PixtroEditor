@@ -95,6 +95,7 @@ namespace Pixtro.Compiler
 		public static string ProjectPath { get; set; }
 		public static string EnginePath { get; set; }
 		public static string GamePath { get; set; }
+		public static string DevkitProPath { get; set; }
 
 		public static int BrickTileSize { get; set; }
 
@@ -104,30 +105,15 @@ namespace Pixtro.Compiler
 			BrickTileSize = 1;
 			Clean = false;
 			OptimizedCode = true;
+			DevkitProPath = "C:\\devkitPro";
 
 			for (int i = 0; i < args.Length; ++i)
 			{
 				string[] arg = args[i].Split('=');
 
-				string exArg() => arg.Length > 1 ? arg[1] : args[++i];
 
 				switch (arg[0])
 				{
-					case "-t":
-					case "--brickSize":
-						BrickTileSize = int.Parse(exArg());
-						break;
-
-					case "-c":
-					case "--clean":
-						Clean = true;
-						break;
-
-					case "-p":
-					case "--projectPath":
-						ProjectPath = exArg();
-						break;
-
 					case "-d":
 					case "--debug":
 						Debug = true;
@@ -156,11 +142,6 @@ namespace Pixtro.Compiler
 						Clean = true;
 
 						break;
-					case "-p":
-					case "--projectPath":
-						ProjectPath = exArg();
-
-						break;
 					case "-g":
 					case "--outputPath":
 					case "--gamePath":
@@ -172,6 +153,11 @@ namespace Pixtro.Compiler
 						EnginePath = exArg();
 
 						break;
+
+					case "--dkpPath":
+						DevkitProPath = exArg();
+
+						break;
 				}
 			}
 
@@ -181,9 +167,11 @@ namespace Pixtro.Compiler
 			if (ProjectPath.EndsWith("\\"))
 				ProjectPath = ProjectPath.Substring(0, ProjectPath.Length - 1);
 			if (EnginePath.EndsWith("\\"))
-				EnginePath = ProjectPath.Substring(0, EnginePath.Length - 1);
+				EnginePath = EnginePath.Substring(0, EnginePath.Length - 1);
 			if (GamePath.EndsWith("\\"))
-				GamePath = ProjectPath.Substring(0, GamePath.Length - 1);
+				GamePath = GamePath.Substring(0, GamePath.Length - 1);
+			if (DevkitProPath.EndsWith("\\"))
+				DevkitProPath = ProjectPath.Substring(0, DevkitProPath.Length - 1);
 		}
 	}
 	public class PointConverter : JsonConverter<Point>
@@ -277,8 +265,7 @@ namespace Pixtro.Compiler
 			Compile(projectPath, argSplit);
 		}
 
-		public static bool Compile(string projectPath, string[] args)
-		{
+		public static bool Compile(string projectPath, string[] args) {
 			Settings.SetInitialArguments(args);
 			Settings.ProjectPath = projectPath.Replace('/', '\\');
 			Settings.EnginePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
@@ -287,19 +274,18 @@ namespace Pixtro.Compiler
 					Path.Combine(Settings.EnginePath, "dll", "output") :
 					Path.Combine(Settings.ProjectPath, Path.GetDirectoryName(projectPath));
 
+			//Settings.Clean = true;
+
 			// Check the engine.h header file for information on how to compile level (and other data maybe in the future idk)
-			foreach (string s in File.ReadAllLines(Path.Combine(Settings.ProjectPath, @"source\engine.h")))
-			{
-				if (s.StartsWith("#define"))
-				{
+			foreach (string s in File.ReadAllLines(Path.Combine(Settings.ProjectPath, @"source\engine.h"))) {
+				if (s.StartsWith("#define")) {
 					string removeComments = s;
 					if (removeComments.Contains("/"))
 						removeComments = removeComments.Substring(0, removeComments.IndexOf('/'));
 
 					string[] split = removeComments.Replace('\t', ' ').Split(new char[] {' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-					switch (split[1])
-					{
+					switch (split[1]) {
 						case "LARGE_TILES":
 							Settings.BrickTileSize = 2;
 							break;
@@ -345,20 +331,27 @@ namespace Pixtro.Compiler
 
 			Process cmd = new Process();
 			ProcessStartInfo info = new ProcessStartInfo();
-			info.FileName = "cmd.exe";
+			info.FileName = Path.Combine(Settings.DevkitProPath, "msys2\\usr\\bin\\make.exe");
+			info.Arguments = $"-C {Settings.ProjectPath} -f {Settings.EnginePath}/Makefile {(Settings.Clean ? "clean" : "")}";
 
-#if !DEBUG
+			if (StandardOutput != null) {
+
+				info.RedirectStandardError = true;
+			}
+
 			info.CreateNoWindow = true;
-#endif
-			info.RedirectStandardInput = true;
-			info.UseShellExecute = false;
 
 			cmd.StartInfo = info;
 			cmd.Start();
 
-			using (StreamWriter sw = cmd.StandardInput)
-			{
-				sw.WriteLine($"make -C {Settings.ProjectPath} -f {Settings.EnginePath}/Makefile {(Settings.Clean ? "clean" : "")}");
+			if (StandardOutput != null) {
+				using (var error = cmd.StandardError) {
+					while (!error.EndOfStream) {
+						string line = error.ReadLine();
+
+
+					}
+				}
 			}
 
 			cmd.WaitForExit();
@@ -370,6 +363,9 @@ namespace Pixtro.Compiler
 
 		public static void ErrorLog(object log)
 		{
+			if (StandardOutput != null) {
+				StandardOutput("ERROR -- " + log.ToString());
+			}
 			Console.ForegroundColor = ConsoleColor.Red;
 			Console.Write("ERROR -- ");
 			Console.ForegroundColor = ConsoleColor.Gray;
@@ -377,27 +373,34 @@ namespace Pixtro.Compiler
 
 			Error = true;
 		}
-		public static void WarningLog(object log)
-		{
+		public static void WarningLog(object log) {
+			if (StandardOutput != null) {
+				StandardOutput("WARNING -- " + log.ToString());
+			}
 			Console.ForegroundColor = ConsoleColor.Yellow;
 			Console.Write("WARNING -- ");
 			Console.ForegroundColor = ConsoleColor.Gray;
 			Console.WriteLine(log.ToString());
 		}
-		public static void Log(object log)
-		{
+		public static void Log(object log) {
+			if (StandardOutput != null) {
+				StandardOutput(log.ToString());
+			}
 			Console.ForegroundColor = ConsoleColor.Gray;
 			Console.WriteLine(log.ToString());
-
 		}
 		public static void DebugLog(object log)
 		{
 #if DEBUG
+			if (StandardOutput != null) {
+				StandardOutput(log.ToString());
+			}
 			Console.ForegroundColor = ConsoleColor.White;
 			Console.WriteLine(log.ToString());
 #endif
 		}
 
 		public static event Action<string> StandardOutput;
+		public static event Action<string, int, string> Warning;
 	}
 }

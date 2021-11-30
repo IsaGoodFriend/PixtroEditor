@@ -978,12 +978,7 @@ namespace Pixtro.Compiler
 
 								for (int i = 0; i < map.Height * bits.Stride; i += 4)
 								{
-									if (i % 16 == 0)
-										fullPalette.Add(Color.FromArgb(0, 0, 0, 0));
-									else
-									{
-										fullPalette.Add(Color.FromArgb(255, bytes[i + 2], bytes[i + 1], bytes[i + 0]));
-									}
+									fullPalette.Add(Color.FromArgb(255, bytes[i + 2], bytes[i + 1], bytes[i + 0]));
 								}
 
 								map.UnlockBits(bits);

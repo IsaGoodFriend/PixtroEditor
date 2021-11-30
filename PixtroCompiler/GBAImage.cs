@@ -470,11 +470,11 @@ namespace Pixtro.Compiler
 
 			for (int ty = 0; ty < Height; ty += tileSize)
 			{
-				for (int tx = Width - tileSize; tx >= 0; tx -= tileSize)
+				for (int tx = 0; tx < Width; tx += tileSize)
 				{
 					for (int y = 0; y < tileSize; ++y)
 					{
-						for (int x = 0; x < tileSize; ++x)
+						for (int x = tileSize - 1; x >= 0; --x)
 						{
 							dumpValue <<= 4;
 							dumpValue |= (uint)baseValues[tx + x, ty + y] & 0xF;
