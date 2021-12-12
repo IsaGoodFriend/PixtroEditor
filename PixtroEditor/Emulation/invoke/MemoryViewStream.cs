@@ -53,7 +53,7 @@ namespace Pixtro.Emulation
 
 		private byte* CurrentPointer() => (byte*)Z.SS(_ptr + _pos);
 
-		public int Read(Span<byte> buffer)
+		new public int Read(Span<byte> buffer)
 		{
 			if (!_readable)
 				throw new IOException();
@@ -108,7 +108,7 @@ namespace Pixtro.Emulation
 			throw new IOException();
 		}
 
-		public void Write(ReadOnlySpan<byte> buffer)
+		new public void Write(ReadOnlySpan<byte> buffer)
 		{
 			if (!_writable)
 				throw new IOException();
