@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
+using Microsoft.Xna.Framework;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,7 +23,7 @@ namespace Pixtro.Editor
 		{
 			ILayoutInfo Parent { get; set; }
 			Rectangle BoundingRect { get; set; }
-			Size MinimumSize();
+			Point MinimumSize();
 			void ResizeWindow(Rectangle bound);
 			void FinalizeSize();
 		}
@@ -57,7 +57,7 @@ namespace Pixtro.Editor
 			public ILayoutInfo Parent { get; set; }
 			public Rectangle BoundingRect { get; set; }
 
-			public Size MinimumSize()
+			public Point MinimumSize()
 			{
 				int width = 0, height;
 
@@ -67,30 +67,30 @@ namespace Pixtro.Editor
 				// Swap coordinates temporarily if splitting vertical just to reuse code to check sizes
 				if (Direction == SplitDirection.Vertical)
 				{
-					int temp = p1.Width;
-					p1.Width = p1.Height;
-					p1.Height = temp;
+					int temp = p1.X;
+					p1.X = p1.Y;
+					p1.Y = temp;
 
-					temp = p2.Width;
-					p2.Width = p2.Height;
-					p2.Height = temp;
+					temp = p2.X;
+					p2.X = p2.Y;
+					p2.Y = temp;
 				}
 
-				if (p1.Width > 0 && p2.Width > 0)
-					width = p1.Width + p2.Width;
-				else if (p1.Width > 0)
-					width = p1.Width;
-				else if (p2.Width > 0)
-					width = p2.Width;
+				if (p1.X > 0 && p2.X > 0)
+					width = p1.X + p2.X;
+				else if (p1.X > 0)
+					width = p1.X;
+				else if (p2.X > 0)
+					width = p2.X;
 
 				width += SPLIT_PIXEL_SIZE;
 
-				height = Math.Max(p1.Height, p2.Height);
+				height = Math.Max(p1.Y, p2.Y);
 
 				if (Direction == SplitDirection.Vertical)
-					return new Size(height, width);
+					return new Point(height, width);
 				else
-					return new Size(width, height);
+					return new Point(width, height);
 			}
 			public void ResizeWindow(Rectangle bound)
 			{
@@ -114,29 +114,29 @@ namespace Pixtro.Editor
 
 				if (Direction == SplitDirection.Horizontal)
 				{
-					if (rect1.Width < size1.Width)
+					if (rect1.Width < size1.X)
 					{
-						rect2.Width -= size1.Width - rect1.Width;
-						rect1.Width = size1.Width;
+						rect2.Width -= size1.X - rect1.Width;
+						rect1.Width = size1.X;
 					}
-					else if (rect2.Width < size2.Width)
+					else if (rect2.Width < size2.X)
 					{
-						rect1.Width -= size2.Width - rect2.Width;
-						rect2.Width = size2.Width;
+						rect1.Width -= size2.X - rect2.Width;
+						rect2.Width = size2.X;
 					}
 					rect2.X = rect1.Right + SPLIT_PIXEL_SIZE;
 				}
 				else
 				{
-					if (rect1.Height < size1.Height)
+					if (rect1.Height < size1.Y)
 					{
-						rect2.Height -= size1.Height - rect1.Height;
-						rect1.Height = size1.Height;
+						rect2.Height -= size1.Y - rect1.Height;
+						rect1.Height = size1.Y;
 					}
-					else if (rect2.Height < size2.Height)
+					else if (rect2.Height < size2.Y)
 					{
-						rect1.Height -= size2.Height - rect2.Height;
-						rect2.Height = size2.Height;
+						rect1.Height -= size2.Y - rect2.Height;
+						rect2.Height = size2.Y;
 					}
 					rect2.Y = rect1.Bottom + SPLIT_PIXEL_SIZE;
 				}
@@ -164,9 +164,9 @@ namespace Pixtro.Editor
 				ChangeRootScene(scene);
 			}
 
-			public Size MinimumSize()
+			public Point MinimumSize()
 			{
-				return new Size(MinimumWidth, MinimumHeight);
+				return new Point(MinimumWidth, MinimumHeight);
 			}
 			public void ResizeWindow(Rectangle bound)
 			{
@@ -181,8 +181,12 @@ namespace Pixtro.Editor
 					RootScene.End();
 
 				RootScene = newScene;
+
 				newScene.EditorLayout = this;
+				newScene.PreviousBounds = newScene.VisualBounds;
+
 				newScene.OnSetWindow(this);
+				newScene.OnResize();
 
 				newScene.Begin();
 			}
@@ -233,11 +237,19 @@ namespace Pixtro.Editor
 				(y - adjustingLayout.BoundingRect.Y + 2) / (float) adjustingLayout.BoundingRect.Height;
 
 			adjustingLayout.SplitPercent = percent;
+
+			foreach (var sc in GetFromSplit(adjustingLayout)) {
+				sc.RootScene.OnResize();
+				sc.RootScene.PreviousBounds = sc.RootScene.VisualBounds;
+			}
 		}
 
 		private void OnResize(int width, int height) {
 
 			layout.ResizeWindow(new Rectangle(0, EditorWindow.TOP_MENU_BAR, width, height - EditorWindow.HEIGHT_SUB));
+			foreach (var layout in this) {
+				layout.RootScene.PreviousBounds = layout.RootScene.VisualBounds;
+			}
 		}
 
 		public SplitDirection GetSplitDirection(Point point)

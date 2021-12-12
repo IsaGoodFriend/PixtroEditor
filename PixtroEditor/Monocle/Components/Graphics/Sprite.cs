@@ -1,9 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
-using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -22,13 +20,6 @@ namespace Monocle {
 		public string Path;
 		private Dictionary<string, Animation> animations;
 		private Animation currentAnimation;
-		public float AnimationTimer {
-			get => animationTimer;
-			set {
-				animationTimer = value;
-				SetFrame(currentAnimation.Frames[CurrentAnimationFrame]);
-			}
-		}
 		private float animationTimer;
 		private int width;
 		private int height;
@@ -36,7 +27,7 @@ namespace Monocle {
 		public Sprite(Atlas atlas, string path)
 			: base(null, true) {
 			this.atlas = atlas;
-			Path = path;
+			this.Path = path;
 			animations = new Dictionary<string, Animation>(StringComparer.OrdinalIgnoreCase);
 			CurrentAnimationID = "";
 		}
@@ -53,71 +44,6 @@ namespace Monocle {
 			OnFrameChange = null;
 			OnChange = null;
 			Animating = false;
-		}
-
-		public Sprite(MTexture texture, string path)
-			: base(null, true) {
-			Reset(texture, path);
-		}
-
-		public void Reset(MTexture texture, string jsonPath) {
-			atlas = Atlas.FromAsepriteTexture(texture, jsonPath);
-			Path = "";
-			animations = new Dictionary<string, Animation>(StringComparer.OrdinalIgnoreCase);
-
-			currentAnimation = null;
-			CurrentAnimationID = "";
-			OnFinish = null;
-			OnLoop = null;
-			OnFrameChange = null;
-			OnChange = null;
-			Animating = false;
-
-			CurrentAnimationFrame = 0;
-			animationTimer = 0;
-
-			AsepriteJson json = JsonConvert.DeserializeObject<AsepriteJson>(File.ReadAllText(jsonPath));
-
-			foreach (var pair in json.meta.frameTags) {
-
-				if (pair.data == "no-loop") {
-
-					Add(pair.name, "", DelayYield(json.frames, pair).ToArray(), FrameYield(pair.from, pair.to, pair.direction).ToArray());
-				}
-				else {
-					AddLoop(pair.name, "", DelayYield(json.frames, pair).ToArray(), FrameYield(pair.from, pair.to, pair.direction).ToArray());
-				}
-			}
-		}
-
-		private static IEnumerable<int> FrameYield(int from, int to, LoopStyles style) {
-			switch (style) {
-				case LoopStyles.forward:
-					for (int i = from; i <= to; ++i) {
-						yield return i;
-					}
-					break;
-				case LoopStyles.backward:
-					for (int i = to; i >= from; --i) {
-						yield return i;
-					}
-					break;
-				case LoopStyles.pingpong:
-					for (int i = from; i <= to; ++i) {
-						yield return i;
-					}
-					for (int i = to - 1; i >= from; --i) {
-						yield return i;
-					}
-					break;
-			}
-		}
-
-		private static IEnumerable<int> DelayYield(Dictionary<int, AsepriteJson.Frame> array, AsepriteJson.FrameTag animation) {
-
-			for (int i = animation.from; i <= animation.to; ++i) {
-				yield return array[i].duration;
-			}
 		}
 
 		public MTexture GetFrame(string animation, int frame) {
@@ -138,12 +64,15 @@ namespace Monocle {
 				else
 					animationTimer += Engine.DeltaTime * Rate;
 
-				void onchange() {
+				//Next Frame
+				if (Math.Abs(animationTimer) >= currentAnimation.Delay) {
+					CurrentAnimationFrame += Math.Sign(animationTimer);
+					animationTimer -= Math.Sign(animationTimer) * currentAnimation.Delay;
+
 					//End of Animation
 					if (CurrentAnimationFrame < 0 || CurrentAnimationFrame >= currentAnimation.Frames.Length) {
 						var was = CurrentAnimationID;
-						if (OnLastFrame != null)
-							OnLastFrame(CurrentAnimationID);
+						OnLastFrame?.Invoke(CurrentAnimationID);
 
 						// only do stuff if OnLastFrame didn't just change the animation
 						if (was == CurrentAnimationID) {
@@ -151,8 +80,7 @@ namespace Monocle {
 							if (currentAnimation.Goto != null) {
 								CurrentAnimationID = currentAnimation.Goto.Choose();
 
-								if (OnChange != null)
-									OnChange(LastAnimationID, CurrentAnimationID);
+								OnChange?.Invoke(LastAnimationID, CurrentAnimationID);
 
 								LastAnimationID = CurrentAnimationID;
 								currentAnimation = animations[LastAnimationID];
@@ -162,8 +90,7 @@ namespace Monocle {
 									CurrentAnimationFrame = 0;
 
 								SetFrame(currentAnimation.Frames[CurrentAnimationFrame]);
-								if (OnLoop != null)
-									OnLoop(CurrentAnimationID);
+								OnLoop?.Invoke(CurrentAnimationID);
 							}
 							else {
 								//Ended
@@ -177,8 +104,7 @@ namespace Monocle {
 								CurrentAnimationID = "";
 								currentAnimation = null;
 								animationTimer = 0;
-								if (OnFinish != null)
-									OnFinish(id);
+								OnFinish?.Invoke(id);
 							}
 						}
 					}
@@ -186,21 +112,6 @@ namespace Monocle {
 						//Continue Animation
 						SetFrame(currentAnimation.Frames[CurrentAnimationFrame]);
 					}
-				}
-
-				//Next Frame
-				while (currentAnimation != null && currentAnimation.Frames.Length > CurrentAnimationFrame && animationTimer * 1000 >= currentAnimation.Delay[CurrentAnimationFrame]) {
-					animationTimer -= currentAnimation.Delay[CurrentAnimationFrame] / 1000f;
-					CurrentAnimationFrame++;
-
-					onchange();
-				}
-				//Next Frame
-				while (currentAnimation != null && CurrentAnimationFrame > 0 && animationTimer < 0) {
-					animationTimer += currentAnimation.Delay[CurrentAnimationFrame] / 1000f;
-					CurrentAnimationFrame--;
-
-					onchange();
 				}
 			}
 		}
@@ -212,8 +123,7 @@ namespace Monocle {
 			Texture = texture;
 			if (Justify.HasValue)
 				Origin = new Vector2(Texture.Width * Justify.Value.X, Texture.Height * Justify.Value.Y);
-			if (OnFrameChange != null)
-				OnFrameChange(CurrentAnimationID);
+			OnFrameChange?.Invoke(CurrentAnimationID);
 		}
 
 		public void SetAnimationFrame(int frame) {
@@ -224,36 +134,76 @@ namespace Monocle {
 
 		#region Define Animations
 
-		public void AddLoop(string animID, string path, float delay, params int[ ] frames) {
-			animations[animID] = new Animation(delay, GetFrames(path, frames), new Chooser<string>(animID, 1f));
+		public void AddLoop(string id, string path, float delay) {
+			animations[id] = new Animation() {
+				Delay = delay,
+				Frames = GetFrames(path),
+				Goto = new Chooser<string>(id, 1f)
+			};
 		}
 
-		public void AddLoop(string animID, string path, int[] miliseconds, params int[] frames) {
-			animations[animID] = new Animation(miliseconds, GetFrames(path, frames), new Chooser<string>(animID, 1f));
+		public void AddLoop(string id, string path, float delay, params int[ ] frames) {
+			animations[id] = new Animation() {
+				Delay = delay,
+				Frames = GetFrames(path, frames),
+				Goto = new Chooser<string>(id, 1f)
+			};
 		}
 
-		public void Add(string animID, string path, float delay, params int[ ] frames) {
-			animations[animID] = new Animation(delay, GetFrames(path, frames), null);
+		public void Add(string id, string path) {
+			animations[id] = new Animation() {
+				Delay = 0,
+				Frames = GetFrames(path),
+				Goto = null
+			};
 		}
 
-		public void Add(string animID, string path, int[] miliseconds, params int[] frames) {
-			animations[animID] = new Animation(miliseconds, GetFrames(path, frames), null);
+		public void Add(string id, string path, float delay) {
+			animations[id] = new Animation() {
+				Delay = delay,
+				Frames = GetFrames(path),
+				Goto = null
+			};
 		}
 
-		public void Add(string animID, string path, float delay, string into) {
-			animations[animID] = new Animation(delay, GetFrames(path), Chooser<string>.FromString<string>(into));
+		public void Add(string id, string path, float delay, params int[ ] frames) {
+			animations[id] = new Animation() {
+				Delay = delay,
+				Frames = GetFrames(path, frames),
+				Goto = null
+			};
 		}
 
-		public void Add(string animID, string path, float delay, Chooser<string> into) {
-			animations[animID] = new Animation(delay, GetFrames(path), into);
+		public void Add(string id, string path, float delay, string into) {
+			animations[id] = new Animation() {
+				Delay = delay,
+				Frames = GetFrames(path),
+				Goto = Chooser<string>.FromString<string>(into)
+			};
 		}
 
-		public void Add(string animID, string path, float delay, string into, params int[ ] frames) {
-			animations[animID] = new Animation(delay, GetFrames(path, frames), Chooser<string>.FromString<string>(into));
+		public void Add(string id, string path, float delay, Chooser<string> into) {
+			animations[id] = new Animation() {
+				Delay = delay,
+				Frames = GetFrames(path),
+				Goto = into
+			};
 		}
 
-		public void Add(string animID, string path, float delay, Chooser<string> into, params int[ ] frames) {
-			animations[animID] = new Animation(delay, GetFrames(path, frames), into);
+		public void Add(string id, string path, float delay, string into, params int[ ] frames) {
+			animations[id] = new Animation() {
+				Delay = delay,
+				Frames = GetFrames(path, frames),
+				Goto = Chooser<string>.FromString<string>(into)
+			};
+		}
+
+		public void Add(string id, string path, float delay, Chooser<string> into, params int[ ] frames) {
+			animations[id] = new Animation() {
+				Delay = delay,
+				Frames = GetFrames(path, frames),
+				Goto = into
+			};
 		}
 
 		private MTexture[ ] GetFrames(string path, int[ ] frames = null) {
@@ -267,7 +217,6 @@ namespace Monocle {
 				for (int i = 0; i < frames.Length; i++) {
 					var frame = atlas.GetAtlasSubtexturesAt(fullPath, frames[i]);
 					if (frame == null)
-
 						throw new Exception("Can't find sprite " + fullPath + " with index " + frames[i]);
 					finalFrames[i] = frame;
 				}
@@ -299,16 +248,15 @@ namespace Monocle {
 				if (!animations.ContainsKey(id))
 					throw new Exception("No Animation defined for ID: " + id);
 #endif
-				if (OnChange != null)
-					OnChange(LastAnimationID, id);
+				OnChange?.Invoke(LastAnimationID, id);
 
 				LastAnimationID = CurrentAnimationID = id;
 				currentAnimation = animations[id];
-				Animating = currentAnimation.Frames.Length > 1;
+				Animating = currentAnimation.Delay > 0;
 
 				if (randomizeFrame) {
+					animationTimer = Calc.Random.NextFloat(currentAnimation.Delay);
 					CurrentAnimationFrame = Calc.Random.Next(currentAnimation.Frames.Length);
-					animationTimer = Calc.Random.Next(currentAnimation.Delay[CurrentAnimationFrame]) / 1000f;
 				}
 				else {
 					animationTimer = 0;
@@ -325,20 +273,19 @@ namespace Monocle {
 				if (!animations.ContainsKey(id))
 					throw new Exception("No Animation defined for ID: " + id);
 #endif
-				if (OnChange != null)
-					OnChange(LastAnimationID, id);
+				OnChange?.Invoke(LastAnimationID, id);
 
 				LastAnimationID = CurrentAnimationID = id;
 				currentAnimation = animations[id];
 
-				if (currentAnimation.Delay.Length > 1) {
+				if (currentAnimation.Delay > 0) {
 					Animating = true;
-					float at = offset;
+					float at = (currentAnimation.Delay * currentAnimation.Frames.Length) * offset;
 
 					CurrentAnimationFrame = 0;
-					while (at * 1000 >= currentAnimation.Delay[CurrentAnimationFrame]) {
-						at -= currentAnimation.Delay[CurrentAnimationFrame];
+					while (at >= currentAnimation.Delay) {
 						CurrentAnimationFrame++;
+						at -= currentAnimation.Delay;
 					}
 
 					CurrentAnimationFrame %= currentAnimation.Frames.Length;
@@ -488,34 +435,9 @@ namespace Monocle {
 		}
 
 		private class Animation {
-			public int[] Delay;
+			public float Delay;
 			public MTexture[ ] Frames;
 			public Chooser<string> Goto;
-
-			public Animation (float delay, MTexture[] frames, Chooser<string> _goto) {
-				Delay = new int[frames.Length];
-				Frames = frames;
-				Goto = _goto;
-
-				int mili = (int)(delay * 1000);
-				Array.Fill(Delay, mili);
-			}
-
-			public Animation(int[] miliseconds, MTexture[] frames, Chooser<string> _goto) {
-				Delay = new int[frames.Length];
-				Frames = frames;
-				Goto = _goto;
-
-				Delay = miliseconds;
-			}
-
-			public Animation(MTexture[] frames, Chooser<string> _goto, IEnumerable<int> miliseconds) {
-				Delay = new int[frames.Length];
-				Frames = frames;
-				Goto = _goto;
-
-				Delay = miliseconds.ToArray();
-			}
 		}
 	}
 }

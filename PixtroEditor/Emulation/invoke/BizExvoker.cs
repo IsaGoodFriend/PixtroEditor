@@ -4,28 +4,15 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
-using Pixtro.Emulation;
 
 namespace Pixtro.Emulation
 {
 	public static class BizExvoker
 	{
 		/// <summary>
-		/// the assembly that all delegate types are placed in
-		/// </summary>
-		private static readonly AssemblyBuilder ImplAssemblyBuilder;
-
-		/// <summary>
 		/// the module that all delegate types are placed in
 		/// </summary>
 		private static readonly ModuleBuilder ImplModuleBuilder;
-
-		static BizExvoker()
-		{
-			var aname = new AssemblyName("BizExvokeProxyAssembly");
-			//ImplAssemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(aname, AssemblyBuilderAccess.Run);
-			//ImplModuleBuilder = ImplAssemblyBuilder.DefineDynamicModule("BizExvokerModule");
-		}
 
 		/// <summary>
 		/// holds the delegate types for a type

@@ -11,29 +11,6 @@ using Newtonsoft.Json;
 
 namespace Monocle {
 
-	internal enum LoopStyles {
-		forward, backward, pingpong,
-	}
-	internal class AsepriteJson {
-		internal struct AseRect {
-			public int x, y, w, h;
-		}
-		internal class Frame {
-			public AseRect frame = default;
-			public int duration = 1;
-		}
-		internal class FrameTag {
-			public string name = "", data = "";
-			public int from = 0, to = 0;
-			public LoopStyles direction = LoopStyles.forward;
-		}
-		internal class Meta {
-			public FrameTag[] frameTags = null;
-		}
-		public Dictionary<int, Frame> frames = null;
-		public Meta meta = null;
-	}
-
 	public class Atlas {
 		public List<Texture2D> Sources;
 		private Dictionary<string, MTexture> textures = new Dictionary<string, MTexture>(StringComparer.OrdinalIgnoreCase);
@@ -48,21 +25,6 @@ namespace Monocle {
 			Packer,
 			PackerNoAtlas
 		};
-
-		public static Atlas FromAsepriteTexture(MTexture texture, string path) {
-			var atlas = new Atlas();
-			atlas.Sources = new List<Texture2D>();
-			atlas.Sources.Add(texture.Texture);
-
-			AsepriteJson json = JsonConvert.DeserializeObject<AsepriteJson>(File.ReadAllText(path));
-
-			for (int i = 0; i < json.frames.Count; ++i) {
-				var f = json.frames[i];
-				atlas.textures.Add(i.ToString(), texture.GetSubtexture(new Rectangle(f.frame.x, f.frame.y, f.frame.w, f.frame.h)));
-			}
-
-			return atlas;
-		}
 
 		public static Atlas FromAtlas(string path, AtlasDataFormat format) {
 			var atlas = new Atlas();

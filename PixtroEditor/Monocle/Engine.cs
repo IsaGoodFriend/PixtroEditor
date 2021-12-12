@@ -138,6 +138,12 @@ namespace Monocle {
 				UpdateView();
 
 				resizing = false;
+
+				if (Layout != null)
+					foreach (var window in Layout) {
+						window.RootScene.OnResize();
+						window.RootScene.PreviousBounds = window.RootScene.VisualBounds;
+					}
 			}
 		}
 #endif
@@ -222,7 +228,7 @@ namespace Monocle {
 			}
 
 			// Get the current layout element under the mouse
-			var item = Layout.GetElementAt(new System.Drawing.Point((int)MInput.Mouse.X, (int)MInput.Mouse.Y));
+			var item = Layout.GetElementAt(new Point((int)MInput.Mouse.X, (int)MInput.Mouse.Y));
 
 			if (MInput.Mouse.PressedLeftButton) {
 				SetActiveScene(MInput.Mouse.Position);
@@ -348,7 +354,7 @@ namespace Monocle {
 		}
 
 		public static void SetActiveScene(Vector2 point) {
-			var item = Layout.GetElementAt(new System.Drawing.Point((int)point.X, (int)point.Y));
+			var item = Layout.GetElementAt(new Point((int)point.X, (int)point.Y));
 
 			if (item == null || item is EditorLayout.LayoutSplit)
 				return;
