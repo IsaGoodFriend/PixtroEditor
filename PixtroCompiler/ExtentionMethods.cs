@@ -1,14 +1,22 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Drawing;
 using Newtonsoft.Json;
 
 namespace Pixtro.Compiler {
-    public static class ExtentionMethods
+	public class PointConverter : JsonConverter<Point> {
+		public override Point ReadJson(JsonReader reader, Type objectType, Point existingValue, bool hasExistingValue, JsonSerializer serializer) {
+
+			var points = (reader.Value as string).Split(',');
+
+			return new Point(int.Parse(points[0].Trim()), int.Parse(points[1].Trim()));
+		}
+
+		public override void WriteJson(JsonWriter writer, Point value, JsonSerializer serializer) {
+		}
+	}
+	public static class ExtentionMethods
 	{
 		// Get all variables and methods
 		// (?<=0x0{8})0(3|8)[0-9a-f]{6} +(?!(_start|__boot_method|__slave_number|_init))[A-Za-z_][0-9A-Za-z_]+(?=\n)

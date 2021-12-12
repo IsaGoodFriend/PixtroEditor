@@ -3,11 +3,72 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.IO;
-using System.Text;
-using System.Threading;
 
-namespace Pixtro.Compiler
-{
+namespace Pixtro.Compiler {
+	public struct FloatColor {
+		public float R, G, B, A;
+
+		public FloatColor(byte r, byte g, byte b, byte a) {
+			R = r / 255f;
+			G = g / 255f;
+			B = b / 255f;
+			A = a / 255f;
+
+			if (A == 0) {
+				R = 0;
+				G = 0;
+				B = 0;
+			}
+		}
+
+		public static FloatColor FlattenColor(FloatColor colorA, FloatColor colorB, BlendType blend) {
+			FloatColor color = colorA;
+
+			if (colorB.A <= 0)
+				return colorA;
+
+			switch (blend) {
+				case BlendType.Normal:
+					color.R = colorB.R;
+					color.G = colorB.G;
+					color.B = colorB.B;
+					color.A = Math.Max(colorA.A, colorB.A);
+					break;
+			}
+
+			return color;
+		}
+
+		public ushort ToGBA(ushort _transparent = 0x8000) {
+			if (A <= 0)
+				return _transparent;
+
+			int r = (int)(R * 255);
+			int g = (int)(G * 255);
+			int b = (int)(B * 255);
+
+			r = (r & 0xF8) >> 3;
+			g = (g & 0xF8) >> 3;
+			b = (b & 0xF8) >> 3;
+
+			return (ushort)(r | (g << 5) | (b << 10));
+		}
+		public Color ToGBAColor() {
+			if (A <= 0.5f) {
+				return Color.FromArgb(0, 0, 0, 0);
+			}
+
+			byte r = (byte)(Math.Floor(R * 31) * 4);
+			byte g = (byte)(Math.Floor(G * 31) * 4);
+			byte b = (byte)(Math.Floor(B * 31) * 4);
+
+			return Color.FromArgb(255, r, g, b);
+		}
+
+		public override string ToString() {
+			return $"{{{R:0.00} - {G:0.00} - {B:0.00} :: {A:0.00}}}";
+		}
+	}
 	public class GBAImage
 	{
 		public static Bitmap GetFormattedBitmap(string path) {
