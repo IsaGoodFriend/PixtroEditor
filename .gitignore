@@ -30,3 +30,5 @@
 *.obj
 *.o
 *.d
+*.ruleset
+launchSettings.json

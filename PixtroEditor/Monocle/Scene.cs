@@ -22,7 +22,8 @@ namespace Monocle {
 		public Camera Camera { get; private set; }
 		public SceneRenderer Renderer { get; private set; }
 		public EditorLayout.LayoutWindow EditorLayout { get; internal set; }
-		public Rectangle VisualBounds => new Rectangle(EditorLayout.BoundingRect.X, EditorLayout.BoundingRect.Y + EditorWindow.SUB_MENU_BAR, EditorLayout.BoundingRect.Width, EditorLayout.BoundingRect.Height - EditorWindow.SUB_MENU_BAR);
+		public Rectangle PreviousBounds { get; internal set; }
+		public Rectangle VisualBounds => EditorLayout == null ? default : new Rectangle(EditorLayout.BoundingRect.X, EditorLayout.BoundingRect.Y + EditorWindow.SUB_MENU_BAR, EditorLayout.BoundingRect.Width, EditorLayout.BoundingRect.Height - EditorWindow.SUB_MENU_BAR);
 
 		public event Action OnEndOfFrame;
 
@@ -57,6 +58,8 @@ namespace Monocle {
 		}
 
 		public virtual void OnSetWindow(EditorLayout.LayoutWindow window) { }
+
+		public virtual void OnResize() { }
 
 		public virtual void Begin() {
 			foreach (var entity in Entities)

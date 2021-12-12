@@ -14,12 +14,12 @@ void init()
 	set_foreground_count(1);
 	finalize_layers();
 
-	//LOAD_BG(sample_ase, 1);
+	// LOAD_BG(sample_ase, 1);
 	LOAD_ENTITY(character, 0);
 
 	load_bg_pal(PAL_test, 0);
 	load_obj_pal(PAL_character, 0);
-	load_sprite(SPR_char_idle, 0, SPRITE32x32);
+	load_sprite_at(SPR_char_idle, 0, SPRITE32x32);
 
 	load_level_pack(PACK_test, 0);
 

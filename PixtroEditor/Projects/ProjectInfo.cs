@@ -29,6 +29,8 @@ namespace Pixtro.Projects {
 			ReleaseBuild = release;
 
 			Compiler.MainProgram.StandardOutput += Scenes.ConsoleScene.Log;
+			Compiler.MainProgram.WarningOutput += Scenes.ConsoleScene.CompilerWarning;
+			Compiler.MainProgram.ErrorOutput += Scenes.ConsoleScene.CompilerError;
 
 			if (CurrentProject.BuiltRelease != release) {
 				CurrentProject.CleanProject();
@@ -38,6 +40,7 @@ namespace Pixtro.Projects {
 			buildThread = new Thread(BuildThread);
 			buildThread.Start();
 		}
+
 		public static void BuildAndRun() {
 			BuildProject(false);
 			OnSuccessfulBuild += () => {

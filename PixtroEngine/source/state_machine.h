@@ -25,3 +25,4 @@ void update_statemachine(StateMachine *machine, int entity_index);
 	set_update(machine, name##_update, state);     \
 	set_begin_state(machine, name##_begin, state); \
 	set_end_state(machine, name##_end, state);
+

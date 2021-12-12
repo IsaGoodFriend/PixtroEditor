@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Linq;
 using System;
 using Monocle;
 using Microsoft.Xna.Framework;
@@ -16,6 +16,19 @@ namespace Pixtro.Scenes {
 	}
 	public class LevelEditorScene : Scene {
 
+		private static readonly float[] ZOOM_LEVELS = {
+			0.25f,
+			0.5f,
+			1f,
+			2f,
+			3f,
+			4f,
+			6f,
+			8f,
+
+		};
+
+		private const int ZOOM_START = 3; // Index of value 2
 		private const int TileSize = 8;
 		private const int tempCountW = 30, tempCountH = 20;
 
@@ -24,9 +37,12 @@ namespace Pixtro.Scenes {
 		private VirtualMap<int> rawTilemap;
 		private TileGrid visualGrid;
 		private Tileset testTileset;
+		private int zoomIndex;
 
 		public LevelEditorScene() {
 			Camera.Zoom = 2;
+			zoomIndex = Array.IndexOf(ZOOM_LEVELS, 2);
+
 			rawTilemap = new VirtualMap<int>(tempCountW, tempCountH, 0);
 
 			HelperEntity.Add(visualGrid = new TileGrid(TileSize, TileSize, tempCountW, tempCountH));
@@ -194,6 +210,12 @@ namespace Pixtro.Scenes {
 
 		#endregion
 
+		public override void OnResize() {
+			base.OnResize();
+
+			Camera.Position -= new Vector2((VisualBounds.Width - PreviousBounds.Width) / 2f, (VisualBounds.Height - PreviousBounds.Height) / 2f) / Camera.Zoom;
+		}
+
 		public override void Begin() {
 			base.Begin();
 		}
@@ -207,20 +229,20 @@ namespace Pixtro.Scenes {
 			if (MInput.Keyboard.Pressed(Keys.E)) {
 				baseState = LevelEditorStates.Erase;
 			}
+		}
 
-			if (MInput.Mouse.WheelDelta != 0) {
+		public override void Update() {
+			base.Update();
+			if (VisualBounds.Contains(MInput.Mouse.X, MInput.Mouse.Y) && MInput.Mouse.WheelDelta != 0) {
+
 				Camera.Position -= (new Vector2(VisualBounds.X, VisualBounds.Y) - MInput.Mouse.Position) / Camera.Zoom;
 
-				if (Camera.Zoom <= 1) {
-					Camera.Zoom *= MInput.Mouse.WheelDelta > 0 ? 2 : 0.5f;
-				}
-				else {
-					Camera.Zoom += MInput.Mouse.WheelDelta > 0 ? 1 : -1;
-				}
+				zoomIndex = Calc.Clamp(zoomIndex + Math.Sign(MInput.Mouse.WheelDelta), 0, ZOOM_LEVELS.Length - 1);
 
-				Camera.Zoom = Calc.Clamp(Camera.Zoom, 0.25f, 8);
+				Camera.Zoom = ZOOM_LEVELS[zoomIndex];
 
 				Camera.Position += (new Vector2(VisualBounds.X, VisualBounds.Y) - MInput.Mouse.Position) / Camera.Zoom;
+				
 			}
 		}
 

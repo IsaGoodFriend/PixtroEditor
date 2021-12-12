@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "PixtroCompiler": {
-      "commandName": "Project",
-      "commandLineArgs": "--debug",
-      "workingDirectory": "C:\\Users\\IsaGoodFriend\\source\\HomeBrew\\Celeste"
-    }
-  }
-}
