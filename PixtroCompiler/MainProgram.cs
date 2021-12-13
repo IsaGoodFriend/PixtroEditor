@@ -111,13 +111,11 @@ namespace Pixtro.Compiler {
             if (File.Exists(Settings.GamePath + ".gba"))
                 File.Delete(Settings.GamePath + ".gba");
 
-
             string[] replacements = new string[]
             {
                 Settings.EnginePath,
                 Settings.GamePath,
                 Settings.Debug ? "-D __DEBUG__ " : "" + (Settings.OptimizedCode ? "-O3 " : ""),
-                "",
             };
 
             for (int i = 0; i < replacements.Length; ++i) {
@@ -159,7 +157,7 @@ namespace Pixtro.Compiler {
             Settings.EnginePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             Settings.GamePath =
                 Settings.Debug ?
-                    Path.Combine(Settings.EnginePath, "dll", "output") :
+                    Path.Combine(Settings.EnginePath, "output") :
                     Path.Combine(Settings.ProjectPath, Path.GetDirectoryName(projectPath));
 
             // Check the engine.h header file for information on how to compile level (and other data maybe in the future idk)
@@ -219,11 +217,10 @@ namespace Pixtro.Compiler {
             ProcessStartInfo info = new ProcessStartInfo();
             info.FileName = "cmd.exe";
 
-#if !DEBUG
-			info.CreateNoWindow = true;
-#endif
+            // TODO: Figure out why the f*** the compiler fails when the window is hidden
+			//info.CreateNoWindow = true;
             info.RedirectStandardInput = true;
-            //info.RedirectStandardError = true;
+            info.RedirectStandardError = true;
             info.UseShellExecute = false;
 
             cmd.StartInfo = info;
@@ -240,13 +237,14 @@ namespace Pixtro.Compiler {
 
             if (info.RedirectStandardError) {
 
-                using (StreamWriter sw = new StreamWriter(File.Open("error.log", FileMode.OpenOrCreate))) {
+                using (StreamWriter sw = new StreamWriter(File.Open("error.log", FileMode.Create))) {
 
                     using (StreamReader er = cmd.StandardError) {
 
                         string read() {
                             string line = er.ReadLine();
                             sw.WriteLine(line);
+                            sw.Flush();
                             return line;
                         }
 
@@ -258,14 +256,35 @@ namespace Pixtro.Compiler {
                             string file, type, message;
                             int line;
 
-                            if (log.StartsWith("In file included from ")) {
+                            string[] split;
+
+                            if (log.Contains("/arm-none-eabi/bin/ld.exe:")) {
+                                file = "";
+                                type = "";
+                                message = "";
+                                line = 0;
+                                log = log.Split("ld.exe:")[1].Trim();
+
+                                while (!log.StartsWith(projectSource)) {
+                                    log = read();
+                                }
+
+                                log = log.Replace(projectSource, "");
+                                split = log.Split(':');
+                                file = split[0].Trim();
+                                line = int.Parse(split[1]);
+
+                                type = "error";
+                                message = split[2].Trim();
+                            }
+                            else if (log.StartsWith("In file included from ")) {
                                 log = log.Replace("In file included from ", "");
                                 if (!log.StartsWith(projectSource)) {
                                     continue;
                                 }
 
                                 log = log.Replace(projectSource, "");
-                                string[] split = log.Split(':');
+                                split = log.Split(':');
                                 file = split[0].Trim();
                                 line = int.Parse(split[1]);
 
@@ -277,7 +296,7 @@ namespace Pixtro.Compiler {
                                 message = split[4].Trim();
                             }
                             else if (log.StartsWith(projectSource)) {
-                                string[] split;
+
                                 do {
                                     log = log.Replace(projectSource, "");
                                     split = log.Split(':');
