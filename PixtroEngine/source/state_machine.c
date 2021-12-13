@@ -18,7 +18,7 @@ void init_statemachine(StateMachine *machine, int count)
 	machine->end_state = (void (**)(int))malloc(4 * count);
 }
 
-void set_update(StateMachine *machine, unsigned int (*function)(), int state_idx)
+void set_update_state(StateMachine *machine, unsigned int (*function)(), int state_idx)
 {
 	machine->updates[state_idx] = function;
 }

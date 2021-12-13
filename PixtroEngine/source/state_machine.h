@@ -13,7 +13,7 @@ typedef struct StateMachine
 
 void init_statemachine(StateMachine *machine, int count);
 
-void set_update(StateMachine *machine, unsigned int (*function)(), int state_idx);
+void set_update_state(StateMachine *machine, unsigned int (*function)(), int state_idx);
 void set_begin_state(StateMachine *machine, void (*function)(int), int state_idx);
 void set_end_state(StateMachine *machine, void (*function)(int), int state_idx);
 

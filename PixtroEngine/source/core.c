@@ -160,13 +160,20 @@ void pixtro_update()
 		// Update engine when not fading
 		if (!fade_timer)
 		{
-			// Run over every active entity and run it's custom update
-			for (i = 0; i < max_entities; ++i)
+			if (!game_freeze)
 			{
-				if (!ENT_FLAG(ACTIVE, i) || !ENT_FLAG(LOADED, i) || !entity_update[ENT_TYPE(i)])
-					continue;
+				// Run over every active entity and run it's custom update
+				for (i = 0; i < max_entities; ++i)
+				{
+					if (!ENT_FLAG(ACTIVE, i) || !ENT_FLAG(LOADED, i) || !entity_update[ENT_TYPE(i)])
+						continue;
 
-				entity_update[ENT_TYPE(i)](i);
+					entity_update[ENT_TYPE(i)](i);
+				}
+			}
+			else
+			{
+				game_freeze--;
 			}
 
 			// Custom update if desired
