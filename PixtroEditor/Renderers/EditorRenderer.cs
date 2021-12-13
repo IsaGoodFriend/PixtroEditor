@@ -7,11 +7,11 @@ using Microsoft.Xna.Framework.Graphics;
 using Pixtro.Editor;
 
 namespace Pixtro.Editor {
-	public class WindowRenderer : Renderer {
+	public class EditorRenderer : Renderer {
 		public BlendState Blending;
 		public SamplerState Sampling;
 
-		public WindowRenderer() {
+		public EditorRenderer() {
 			Blending = BlendState.AlphaBlend;
 			Sampling = SamplerState.PointClamp;
 

@@ -45,7 +45,7 @@ namespace Pixtro.Projects {
 			BuildProject(false);
 			OnSuccessfulBuild += () => {
 				Engine.OverloadGameLoop = () => {
-					Emulation.EmulationHandler.LoadGame(Path.Combine(Directory.GetCurrentDirectory(), "dll/output.gba"));
+					Emulation.EmulationHandler.LoadGame(Path.Combine(Directory.GetCurrentDirectory(), "output.gba"));
 					Engine.OverloadGameLoop = null;
 				};
 			};

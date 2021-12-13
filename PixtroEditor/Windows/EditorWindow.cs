@@ -21,11 +21,12 @@ namespace Pixtro.Editor {
 		public EditorWindow() : base(1280, 720, 1280, 720, "Pixtro", false) {
 			IsMouseVisible = true;
 			Window.AllowUserResizing = true;
-
 		}
 
 		protected override void Initialize() {
 			base.Initialize();
+
+			fullRenderer = new EditorRenderer();
 
 			EmulationHandler.SetController(new MonoGameController());
 			var tempButton = new BarButton("File");
@@ -41,7 +42,6 @@ namespace Pixtro.Editor {
 			};
 			UIFramework.AddControl(tempButton);
 
-			//EmulationHandler.LoadGame("C:/Users/IsaGoodFriend/Downloads/BizHawk-2.5.0/roms/WarioLand4/WarioLand4Original.gba");
 		}
 
 		protected override void LoadContent() {

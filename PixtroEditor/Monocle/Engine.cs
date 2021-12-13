@@ -71,7 +71,7 @@ namespace Monocle {
 
 		// scenes and layout
 		private Scene activeScene;
-		private WindowRenderer fullRenderer;
+		protected Renderer fullRenderer;
 		private bool sceneChanged = false;
 
 		// util
@@ -189,7 +189,6 @@ namespace Monocle {
 			Graphics.PreferredBackBufferHeight = 720;
 			Graphics.ApplyChanges();
 
-			fullRenderer = new WindowRenderer();
 			
 			UpdateView();
 
