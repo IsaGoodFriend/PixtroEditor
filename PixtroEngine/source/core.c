@@ -275,7 +275,7 @@ void load_background_tiles(int index, unsigned int *tiles, unsigned int tile_len
 			TILESET_SET(index, TILESET_SIZE(index - 1) + TILESET_OFFSET(index - 1), tile_len);
 
 		layers[index].tile_ptr = tiles;
-		layers[index].tile_meta &= ~0x30000; //size;
+		layers[index].tile_meta &= ~0x30000; // size;
 		layers[index].tile_meta |= size << 16;
 
 		for (int i = index + 1; i < 4; ++i)
@@ -416,7 +416,7 @@ void async_loading()
 	{
 		int i;
 		// Is this needed?  Will there ever be a case where the game will read outside of the used tilesets?
-		//for (i = 0; i < 256; ++i)
+		// for (i = 0; i < 256; ++i)
 		//{
 		//	tile_types[i] = 0;
 		//}
@@ -460,7 +460,7 @@ void start_fading()
 	fade_timer = 1;
 }
 
-//Settings File
+// Settings File
 void load_settings()
 {
 	int index;
