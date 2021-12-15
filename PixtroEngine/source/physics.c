@@ -18,8 +18,8 @@
 
 unsigned int tile_types[256];
 
-unsigned int lvl_width, lvl_height, loading_width, loading_height;
-unsigned short *tileset_data;
+extern unsigned int lvl_width, lvl_height, loading_width, loading_height;
+extern unsigned short *tileset_data;
 
 void load_tiletypes(unsigned int *coll_data)
 {
@@ -47,6 +47,10 @@ int get_block(int x, int y)
 
 unsigned int entity_physics(Entity *ent, int hit_mask)
 {
+	if (ent->width <= 0 || ent->height <= 0)
+	{
+		return 0;
+	}
 	// Get the sign (-/+) of the velocity components
 	int sign_x = (ent->vel_x >> 31) | 1, sign_y = (ent->vel_y >> 31) | 1;
 	int y_is_pos = -(~(ent->vel_y) >> 31); // If y is positive, equals 1, else 0;
@@ -62,7 +66,7 @@ unsigned int entity_physics(Entity *ent, int hit_mask)
 		lef = FIXED2INT(ent->x),
 		rgt = lef + ent->width;
 
-	//Get the start and end of the base collisionbox
+	// Get the start and end of the base collisionbox
 	int y_min = ent->y - y_is_neg * (INT2FIXED(ent->height) - 1),
 		y_max = ent->y + y_is_pos * (INT2FIXED(ent->height) - 1),
 		x_min = ent->x - x_is_neg * (INT2FIXED(ent->width) - 1),

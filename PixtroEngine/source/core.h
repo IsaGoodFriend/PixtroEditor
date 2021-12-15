@@ -87,6 +87,8 @@ extern unsigned int game_life, levelpack_life, level_life;
 extern unsigned int game_freeze;
 extern unsigned int engine_flags;
 
+extern void (*onfinish_async_loading)();
+
 #ifdef __DEBUG__
 
 #define GAME_DFLAG_WAITING 0x00000001

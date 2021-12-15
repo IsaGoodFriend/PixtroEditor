@@ -160,6 +160,8 @@ namespace Pixtro.Compiler {
                     Path.Combine(Settings.EnginePath, "output") :
                     Path.Combine(Settings.ProjectPath, Path.GetDirectoryName(projectPath));
 
+            Error = false;
+
             // Check the engine.h header file for information on how to compile level (and other data maybe in the future idk)
             foreach (string s in File.ReadAllLines(Path.Combine(Settings.ProjectPath, @"source\engine.h"))) {
                 if (s.StartsWith("#define")) {
@@ -204,10 +206,19 @@ namespace Pixtro.Compiler {
 			}
 #endif
 
-            if (Error)
+            if (Error) {
+                WarningOutput = null;
+                ErrorOutput = null;
+                StandardOutput = null;
+
                 return false;
+            }
 
             if (Settings.EnginePath.Contains(" ") || Settings.GamePath.Contains(" ") || Settings.ProjectPath.Contains(" ")) {
+                WarningOutput = null;
+                ErrorOutput = null;
+                StandardOutput = null;
+
                 return false;
             }
 

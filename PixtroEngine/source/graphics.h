@@ -43,16 +43,12 @@ void load_anim_sprite_at(unsigned int *sprites, int index, int shape, int frames
 void load_obj_pal(unsigned short *pal, int palIndex);
 void load_bg_pal(unsigned short *pal, int palIndex);
 
-#ifdef LARGE_TILES
 #define LOAD_TILESET(name) load_tileset((unsigned int *)TILESET_##name, (unsigned short *)TILE_MAPPING_##name, (unsigned int *)TILECOLL_##name, TILESET_##name##_len)
 void load_tileset(unsigned int *tiles, unsigned short *mapping, unsigned int *collision, int count);
-#else
-#define LOAD_TILESET(name) load_tileset((unsigned int *)TILESET_##name, (unsigned int *)TILECOLL_##name, TILESET_##name##_len)
-void load_tileset(unsigned int *tiles, unsigned int *collision, int count);
-#endif
 
 void draw(int x, int y, int sprite, int flip, int prio, int pal);
 void draw_affine(AffineMatrix matrix, int sprite, int prio, int pal);
+void draw_affine_big(AffineMatrix matrix, int sprite, int prio, int pal);
 
 void init_drawing();
 void end_drawing();

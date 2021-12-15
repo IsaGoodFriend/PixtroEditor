@@ -40,13 +40,14 @@ extern unsigned int lvl_width, lvl_height;
 extern unsigned short *tileset_data;
 unsigned short *loaded_levels_a[64], *loaded_levels_b[64];
 unsigned int *loading_levelpack;
-extern unsigned char *lvl_info;
+extern unsigned char *level_rom;
 extern int level_loading;
-extern unsigned short *level_toload;
+extern unsigned short *level_ram;
 extern unsigned int unloaded_entities[64];
 
 Routine loading_routine;
 void (*onfade_function)(Routine *);
+void (*onfinish_async_loading)();
 Routine onfade_routine;
 
 // Engine stuff
@@ -326,10 +327,8 @@ void finalize_layers()
 
 		if (i >= foreground_count && layers[i].tile_meta & LAYER_VIS_UPDATE)
 		{
-
 			if (layers[i].tile_meta & TILES_CHANGED)
 			{
-
 				memcpy(&tile_mem[BG_TILESET][TILESET_OFFSET(i)], layers[i].tile_ptr, TILESET_SIZE(i) << 5);
 			}
 			if (layers[i].tile_meta & MAPPING_CHANGED)
@@ -395,6 +394,7 @@ void load_level_pack_async(unsigned int *level_pack, int section)
 }
 void async_loading()
 {
+
 	int data = loading_levelpack[0];
 
 	rt_begin(loading_routine);
@@ -408,7 +408,7 @@ void async_loading()
 	{
 	case 1: // Set up for next level
 		level_loading++;
-		loaded_levels_a[level_loading] = level_toload;
+		loaded_levels_a[level_loading] = level_ram;
 
 		load_header((unsigned char *)loading_levelpack[1]);
 		loading_levelpack++;
@@ -418,6 +418,7 @@ void async_loading()
 		break;
 	case 3:
 		set_entities_location();
+
 		break;
 	case 4: // Load in tileset collision data
 	{
@@ -449,6 +450,12 @@ void async_loading()
 	{
 		level_loading++;
 		loaded_levels_a[level_loading] = NULL;
+	}
+
+	if (onfinish_async_loading)
+	{
+		onfinish_async_loading();
+		onfinish_async_loading = NULL;
 	}
 
 	rt_end();

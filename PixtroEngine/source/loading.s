@@ -15,7 +15,7 @@ lz10_decmp_WRAM:
 @ r0 is always the level data pointer
 load_header:
 	
-	ldr		r1, =level_toload
+	ldr		r1, =level_ram
 	ldr		r1, [r1]
 	ldr		r3, =loading_width
 	ldrh	r2, [r0]
@@ -24,18 +24,18 @@ load_header:
 	ldrh	r2, [r0, #2]
 	strh	r2, [r1, #2]
 	ldr		r3, =loading_height
-	str		r2, [r3]	@ load width and height into level storage
+	str		r2, [r3]		@ load width and height into level storage
 	
 	add		r0,	#4
 	add		r1,	#4
 	
 .ld_meta:
-	ldr		r2,	[r0]		@ load meta index
+	ldrb	r2,	[r0]		@ load meta index
 	
 	cmp		r2, #128
 	bge		.ld_meta_e		@ skip if >= 128
 	
-	ldr		r3,	[r0, #1]	@ load meta value
+	ldrb	r3,	[r0, #1]	@ load meta value
 	strb	r2, [r1]
 	strb	r3,	[r1, #1]	@ save meta value
 	add		r1, #2
@@ -52,10 +52,10 @@ load_header:
 	add		r1, #2
 	
 	@ --- end of loading ---
-	ldr		r2, =level_toload
+	ldr		r2, =level_ram
 	str		r1, [r2]
 	
-	ldr		r1, =lvl_info
+	ldr		r1, =level_rom
 	str		r0, [r1]
 	bx		lr
 @ end load_header

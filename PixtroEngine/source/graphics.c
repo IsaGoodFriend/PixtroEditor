@@ -141,7 +141,7 @@ void load_sprite_at(unsigned int *sprite, int index, int shape)
 		int i;
 		bankLoc = BANK_MEM_START;
 
-		//Search for an open spot in the sprites
+		// Search for an open spot in the sprites
 		for (i = 0; i < BANK_LIMIT; ++i)
 		{
 
@@ -217,14 +217,15 @@ void unload_sprite(int index)
 #ifdef LARGE_TILES
 void load_tileset(unsigned int *tiles, unsigned short *mapping, unsigned int *collision, int count)
 {
-	memcpy(&tile_mem[FG_TILESET][1], tiles, count << 5);
+	memcpy(&tile_mem[FG_TILESET][1], tiles, count << 7);
 	memcpy(TILE_INFO, mapping, count << 3);
 	load_tiletypes(collision);
 }
 #else
-void load_tileset(unsigned int *tiles, unsigned int *collision, int count)
+void load_tileset(unsigned int *tiles, unsigned short *mapping, unsigned int *collision, int count)
 {
-	memcpy(&tile_mem[FG_TILESET][1], tiles, count << 4);
+	memcpy(&tile_mem[FG_TILESET][1], tiles, count << 5);
+	memcpy(TILE_INFO, mapping, count << 1);
 	load_tiletypes(collision);
 }
 #endif
