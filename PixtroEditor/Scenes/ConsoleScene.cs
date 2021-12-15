@@ -43,7 +43,7 @@ namespace Pixtro.Scenes {
 			if (match.Success)
 				displayWarning = match.Groups[1].Value;
 
-			//Log($"WARNING :: {file} {line} -- {displayWarning}");
+			Log($"WARNING :: {file} {line} -- {displayWarning}");
 		}
 		internal static void CompilerError(string file, int line, string warning) {
 			var match = Regex.Match(warning, @"([\s\S]+) \[[\w-]+\]$");

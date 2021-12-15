@@ -276,11 +276,11 @@ namespace Pixtro.Compiler {
                                 line = 0;
                                 log = log.Split("ld.exe:")[1].Trim();
 
-                                while (!log.StartsWith(projectSource)) {
+                                while (!log.StartsWith(projectSource) && !log.StartsWith(engineSource)) {
                                     log = read();
                                 }
 
-                                log = log.Replace(projectSource, "");
+                                log = log.Replace(projectSource, "").Replace(engineSource, "");
                                 split = log.Split(':');
                                 file = split[0].Trim();
                                 line = int.Parse(split[1]);
@@ -306,10 +306,18 @@ namespace Pixtro.Compiler {
                                 type = split[3].Trim();
                                 message = split[4].Trim();
                             }
+#if DEBUG
+                            else if (log.StartsWith(projectSource) || log.StartsWith(engineSource)) {
+#else
                             else if (log.StartsWith(projectSource)) {
+#endif
 
                                 do {
+#if DEBUG
+                                    log = log.Replace(projectSource, "").Replace(engineSource, "");
+#else
                                     log = log.Replace(projectSource, "");
+#endif
                                     split = log.Split(':');
 
                                     log = read();

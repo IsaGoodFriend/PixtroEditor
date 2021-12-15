@@ -99,6 +99,7 @@ int load_sprite(unsigned int *sprite, int shape)
 	{
 		if (shapes[value] == -1)
 		{
+			shapes[value] = shape;
 			load_sprite_at(sprite, value, shape);
 			return value;
 		}
@@ -399,7 +400,7 @@ void begin_drawing()
 		// Don't animate sprites if update paused
 #ifdef __DEBUG__
 		if (ENGINE_DEBUGFLAG(PAUSE_UPDATES))
-			continue;
+			break;
 #endif
 
 		if (!anim_bank[i])

@@ -59,7 +59,7 @@ unsigned int entity_physics(Entity *ent, int hit_mask)
 	int x_is_neg = ent->vel_x >> 31;	   // If x is negative, equals -1, else 0;
 
 	// Box collision indexes - Tile values;
-	int index = 0, index2 = 0;
+	int idxX = 0, idxY = 0;
 
 	int top = FIXED2INT(ent->y),
 		bot = top + ent->height,
@@ -77,11 +77,12 @@ unsigned int entity_physics(Entity *ent, int hit_mask)
 
 	int offsetX = 0xFFFFFF, offsetY = 0xFFFFFF;
 
-	for (index = FIXED2BLOCK(x_min); index != FIXED2BLOCK(x_max + ent->vel_x) + sign_x; index += sign_x)
+	// X physics
+	for (idxX = FIXED2BLOCK(x_min); idxX != FIXED2BLOCK(x_max + ent->vel_x) + sign_x; idxX += sign_x)
 	{
-		for (index2 = FIXED2BLOCK(y_min); index2 != FIXED2BLOCK(y_max) + sign_y; index2 += sign_y)
+		for (idxY = FIXED2BLOCK(y_min); idxY != FIXED2BLOCK(y_max) + sign_y; idxY += sign_y)
 		{
-			int block = get_block(index, index2);
+			int block = get_block(idxX, idxY);
 			if (!block) // If the block is air, then ignore
 				continue;
 
@@ -94,7 +95,7 @@ unsigned int entity_physics(Entity *ent, int hit_mask)
 
 			shape = shape & TILE_SHAPE_MASK;
 
-			int temp_offset = 0;
+			int temp_offset = 0xFFFF;
 
 			// detecting colliison
 			switch (shape)
@@ -102,17 +103,17 @@ unsigned int entity_physics(Entity *ent, int hit_mask)
 
 			fullshape_x:
 			case 0:
-				temp_offset = (BLOCK2FIXED(index - x_is_neg) - INT2FIXED(ent->width * x_is_pos)) - ent->x;
+				temp_offset = (BLOCK2FIXED(idxX - x_is_neg) - INT2FIXED(ent->width * x_is_pos)) - ent->x;
 				break;
 
 			default:
 				continue;
 			}
 
-			if (INT_ABS(temp_offset) < offsetX) // If new movement is smaller, set collision data.
+			if (INT_ABS(temp_offset) < INT_ABS(offsetX)) // If new movement is smaller, set collision data.
 			{
 				// Set offset
-				offsetX = INT_ABS(temp_offset);
+				offsetX = temp_offset;
 				hit_value_x = mask;
 			}
 			else if (temp_offset == offsetX)
@@ -124,9 +125,8 @@ unsigned int entity_physics(Entity *ent, int hit_mask)
 		if (hit_value_x)
 		{
 			ent->x += offsetX;
-			offsetX += ent->vel_x;
 
-			if (ent->vel_x != 0 && sign_x == INT_SIGN((BLOCK2FIXED(index) + 0x400) - (ent->x + (ent->width >> 1))))
+			if (ent->vel_x != 0 && sign_x == INT_SIGN((BLOCK2FIXED(idxX) + 0x400) - (ent->x + (ent->width >> 1))))
 				ent->vel_x = 0;
 			else
 				hit_value_x = 0;
@@ -138,16 +138,16 @@ unsigned int entity_physics(Entity *ent, int hit_mask)
 	x_min = ent->x - x_is_neg * (INT2FIXED(ent->width) - 1);
 	x_max = ent->x + x_is_pos * (INT2FIXED(ent->width) - 1);
 
-	for (index = FIXED2BLOCK(y_min); index != FIXED2BLOCK(y_max + ent->vel_y) + sign_y; index += sign_y)
+	// Y Physics
+	for (idxY = FIXED2BLOCK(y_min); idxY != FIXED2BLOCK(y_max + ent->vel_y) + sign_y; idxY += sign_y)
 	{
-		for (index2 = FIXED2BLOCK(x_min); index2 != FIXED2BLOCK(x_max) + sign_x; index2 += sign_x)
+		for (idxX = FIXED2BLOCK(x_min); idxX != FIXED2BLOCK(x_max) + sign_x; idxX += sign_x)
 		{
-
-			int shape = get_block(index2, index);
-			if (!shape)
+			int block = get_block(idxX, idxY);
+			if (!block)
 				continue;
 
-			shape = tile_types[shape - 1];
+			int shape = tile_types[block - 1];
 			int type = (shape & TILE_TYPE_MASK) >> TILE_TYPE_SHIFT;
 			int mask = 1 << (type - 1);
 
@@ -156,31 +156,26 @@ unsigned int entity_physics(Entity *ent, int hit_mask)
 
 			shape = shape & TILE_SHAPE_MASK;
 
-			int temp_offset;
+			int temp_offset = 0xFFFF;
 
+			// detecting colliison
 			switch (shape)
 			{
 
 			fullshape_y:
 			case 0:
-				temp_offset = (BLOCK2FIXED(index - y_is_neg) - INT2FIXED(ent->height * y_is_pos)) - ent->y;
+				temp_offset = (BLOCK2FIXED(idxY - y_is_neg) - INT2FIXED(ent->height * y_is_pos)) - ent->y;
 				break;
 
-			case 1:
-				if (ent->vel_y < 0 ||
-					bot > BLOCK2INT(index))
-					continue;
-
-				goto fullshape_y;
-				break;
 			default:
 				continue;
 			}
 
-			if (INT_ABS(temp_offset) < INT_ABS(offsetY))
-			{						   // If new movement is smaller, set collision data.
-				offsetY = temp_offset; // Set offset
-				hit_value_y |= mask;
+			if (INT_ABS(temp_offset) < INT_ABS(offsetY)) // If new movement is smaller, set collision data.
+			{
+				// Set offset
+				offsetY = temp_offset;
+				hit_value_y = mask;
 			}
 			else if (temp_offset == offsetY)
 			{
@@ -191,9 +186,8 @@ unsigned int entity_physics(Entity *ent, int hit_mask)
 		if (hit_value_y)
 		{
 			ent->y += offsetY;
-			offsetY += ent->vel_y;
 
-			if (ent->vel_y != 0 && sign_y == INT_SIGN((BLOCK2FIXED(index) + 0x400) - (ent->y + (ent->height >> 1))))
+			if (ent->vel_y != 0 && sign_y == INT_SIGN((BLOCK2FIXED(idxY) + 0x400) - (ent->y + (ent->height >> 1))))
 				ent->vel_y = 0;
 			else
 				hit_value_y = 0;
@@ -206,10 +200,10 @@ unsigned int entity_physics(Entity *ent, int hit_mask)
 }
 unsigned int collide_rect(int x, int y, int width, int height, int hit_mask)
 {
-	int y_min = FIXED2INT(y),
+	int y_min = y,
 		y_max = y_min + height - 1;
 
-	int x_min = FIXED2INT(x),
+	int x_min = x,
 		x_max = x_min + width - 1;
 
 	// Block values that were hit - flag
