@@ -14,6 +14,7 @@ namespace Pixtro.Compiler
 		void Unflip();
 
 		bool EqualTo(T other, FlipStyle flippable);
+		bool EqualToFlipped(T other, FlipStyle flippable);
 		FlipStyle GetFlipDifference(T other);
 	}
 	internal class CompareFlippable<T> : IEqualityComparer<T> where T : IFlippable<T>
@@ -38,11 +39,25 @@ namespace Pixtro.Compiler
 			return obj.GetHashCode();
 		}
 	}
+	internal class CompareFlippable_Static<T> : IEqualityComparer<T> where T : IFlippable<T> {
+		public CompareFlippable_Static() {
 
+		}
+		public CompareFlippable_Static(FlipStyle style) {
+			flipStyle = style;
+		}
+		public FlipStyle flipStyle = FlipStyle.Both;
 
+		public bool Equals(T x, T y) {
+			return x.EqualToFlipped(y, flipStyle);
+		}
 
-	public class Tile : IFlippable<Tile>
-	{
+		public int GetHashCode(T obj) {
+			return obj.GetHashCode();
+		}
+	}
+
+	public class Tile : IFlippable<Tile> {
 		private byte[] bitData;
 		private uint[] rawData;
 		private FlipStyle flipped;
@@ -51,27 +66,25 @@ namespace Pixtro.Compiler
 
 		public uint[] RawData => rawData;
 
-		public byte this[int x, int y]
-		{
-			get
-			{
+		public byte this[int x, int y] {
+			get {
 				return bitData[x + (y * 8)];
 			}
 		}
 
-		public Tile()
-		{
+		public Tile() {
 			IsAir = true;
 
 			bitData = new byte[64];
 			rawData = new uint[8];
 		}
+		public Tile(Tile copy) : this() {
+			LoadInData(copy.rawData, 0);
+		}
 
-		public void LoadInData(uint[] data, int index)
-		{
+		public void LoadInData(uint[] data, int index) {
 			IsAir = true;
-			for (int i = 0; i < 8; ++i)
-			{
+			for (int i = 0; i < 8; ++i) {
 				rawData[i] = data[i + index];
 
 				IsAir &= rawData[i] == 0;
@@ -79,7 +92,7 @@ namespace Pixtro.Compiler
 				int offset = i;
 				offset += index;
 
-				bitData[ i << 3		]	= (byte)( data[offset] & 0x0000000F);
+				bitData[(i << 3) + 0]   = (byte)((data[offset] & 0x0000000F) >> 0);
 				bitData[(i << 3) + 1]   = (byte)((data[offset] & 0x000000F0) >> 4);
 				bitData[(i << 3) + 2]   = (byte)((data[offset] & 0x00000F00) >> 8);
 				bitData[(i << 3) + 3]   = (byte)((data[offset] & 0x0000F000) >> 12);
@@ -91,22 +104,174 @@ namespace Pixtro.Compiler
 			}
 		}
 
-		public void Flip(FlipStyle flip)
-		{
-			if (flip == FlipStyle.X)
-			{
+		public void Flip(FlipStyle flip) {
+			if (flip == FlipStyle.X) {
 				flipped ^= FlipStyle.X;
 				bitData.Flip(true, 8);
 			}
-			else if (flip == FlipStyle.Y)
-			{
+			else if (flip == FlipStyle.Y) {
 				flipped ^= FlipStyle.Y;
 				bitData.Flip(false, 8);
 			}
-			else if (flip != FlipStyle.None)
-			{
+			else if (flip != FlipStyle.None) {
 				Flip(FlipStyle.X);
 				Flip(FlipStyle.Y);
+			}
+		}
+		public void Unflip() {
+			Flip(flipped);
+		}
+
+		public bool EqualTo(Tile other, FlipStyle flippable) {
+			if (other == null)
+				return false;
+
+			Unflip();
+			other.Unflip();
+
+			return EqualToFlipped(other, flippable);
+		}
+		public bool EqualToFlipped(Tile other, FlipStyle flippable) {
+			if (other == null)
+				return false;
+
+			if (Enumerable.SequenceEqual(bitData, other.bitData))
+				return true;
+
+			// Check mirrored on X axis
+			if (flippable.HasFlag(FlipStyle.X)) {
+				Flip(FlipStyle.X);
+
+				if (Enumerable.SequenceEqual(bitData, other.bitData))
+					return true;
+
+				if (flippable.HasFlag(FlipStyle.Y)) {
+					Flip(FlipStyle.Y);
+
+					if (Enumerable.SequenceEqual(bitData, other.bitData))
+						return true;
+				}
+
+				Unflip();
+			}
+			// Check mirrored on the y axis only
+			if (flippable.HasFlag(FlipStyle.Y)) {
+				Flip(FlipStyle.Y);
+
+				if (Enumerable.SequenceEqual(bitData, other.bitData))
+					return true;
+			}
+
+			return false;
+		}
+
+		public FlipStyle GetFlipDifference(Tile other) {
+			Unflip();
+			other.Unflip();
+
+			if (Enumerable.SequenceEqual(bitData, other.bitData))
+				return FlipStyle.None;
+
+			Flip(FlipStyle.X);
+			if (Enumerable.SequenceEqual(bitData, other.bitData))
+				return FlipStyle.X;
+
+			Flip(FlipStyle.Y);
+			if (Enumerable.SequenceEqual(bitData, other.bitData))
+				return FlipStyle.Both;
+
+			Flip(FlipStyle.X);
+			if (Enumerable.SequenceEqual(bitData, other.bitData))
+				return FlipStyle.Y;
+
+			throw new Exception();
+		}
+		public ushort GetFlipOffset(Tile other) {
+			return (ushort)GetFlipDifference(other);
+		}
+
+		public byte RawBit(int x, int y) {
+			x <<= 2;
+			return (byte)((rawData[y] & (0xF << x)) >> x);
+		}
+		public override string ToString() {
+			var flipNow = flipped;
+
+			if (flipped != FlipStyle.None)
+				Unflip();
+
+			string retval = "";
+			for (int i = 0; i < bitData.Length; ++i) {
+				retval += bitData[i].ToString("X");
+			}
+
+			Flip(flipNow);
+
+			return retval;
+		}
+
+	}
+	public class LargeTile : IFlippable<LargeTile>
+	{
+		private FlipStyle flipped;
+		private static IEnumerable<Tile> GetEmptyTiles(int size)
+		{
+			size *= size;
+			for (int i = 0; i < size; ++i)
+			{
+				yield return new Tile();
+			}
+		}
+
+		public int SizeOfTile { get; internal set; }
+
+		internal byte[] bitData;
+		internal Tile[,] tiles;
+
+		public bool IsAir { get; private set; }
+
+		public LargeTile(Tile[] tileArray, int tileSize)
+		{
+			SizeOfTile = tileSize;
+			tileSize /= 8;
+			tiles = new Tile[tileSize, tileSize];
+			bitData = new byte[tileSize * tileSize * 64];
+
+			int x = 0, y = 0;
+
+			IsAir = true;
+			for (int i = 0; i < tileSize * tileSize; ++i)
+			{
+				var currTile = tiles[x, y] = tileArray[i];
+
+				for (int u = 0; u < 8; ++u) {
+					for (int v = 0; v < 8; ++v) {
+						bitData[(u + (x * 8)) + (v + (y * 8)) * 8] = currTile[u, v];
+					}
+				}
+
+				IsAir &= currTile.IsAir;
+
+				if (++x >= tileSize)
+				{
+					x = 0;
+					++y;
+				}
+			}
+		}
+		public LargeTile(int widthInTiles) : this(GetEmptyTiles(widthInTiles).ToArray(), widthInTiles << 3) { }
+
+
+		public void Flip(FlipStyle flip) {
+			if ((flip & FlipStyle.X) != FlipStyle.None) {
+				flipped ^= FlipStyle.X;
+
+				bitData.Flip(true, SizeOfTile);
+			}
+			if ((flip & FlipStyle.Y) != FlipStyle.None) {
+				flipped ^= FlipStyle.Y;
+
+				bitData.Flip(false, SizeOfTile);
 			}
 		}
 		public void Unflip()
@@ -114,13 +279,25 @@ namespace Pixtro.Compiler
 			Flip(flipped);
 		}
 
-		public bool EqualTo(Tile other, FlipStyle flippable)
-		{
-			if (other == null)
+		public bool EqualTo(LargeTile other, FlipStyle flippable) {
+			if (other == null || other.SizeOfTile != SizeOfTile)
 				return false;
+			if (ReferenceEquals(this, other))
+				return true;
 
 			Unflip();
 			other.Unflip();
+
+			return EqualToFlipped(other, flippable);
+		}
+		public bool EqualToFlipped(LargeTile other, FlipStyle flippable)
+		{
+			if (other == null || other.SizeOfTile != SizeOfTile)
+				return false;
+			if (ReferenceEquals(this, other))
+				return true;
+
+			var comparer = new CompareFlippable<Tile>(){ flipStyle = flippable };
 
 			if (Enumerable.SequenceEqual(bitData, other.bitData))
 				return true;
@@ -155,171 +332,24 @@ namespace Pixtro.Compiler
 			return false;
 		}
 
-		public FlipStyle GetFlipDifference(Tile other)
-		{
-			Unflip();
-			other.Unflip();
-
-			if (Enumerable.SequenceEqual(bitData, other.bitData))
-				return FlipStyle.None;
-
-			Flip(FlipStyle.X);
-			if (Enumerable.SequenceEqual(bitData, other.bitData))
-				return FlipStyle.X;
-
-			Flip(FlipStyle.Y);
-			if (Enumerable.SequenceEqual(bitData, other.bitData))
-				return FlipStyle.Both;
-
-			Flip(FlipStyle.X);
-			if (Enumerable.SequenceEqual(bitData, other.bitData))
-				return FlipStyle.Y;
-
-			throw new Exception();
-		}
-		public ushort GetFlipOffset(Tile other)
-		{
-			return (ushort)GetFlipDifference(other);
-		}
-
-	}
-	public class LargeTile : IFlippable<LargeTile>
-	{
-		private FlipStyle flipped;
-		private static IEnumerable<Tile> GetEmptyTiles(int size)
-		{
-			size *= size;
-			for (int i = 0; i < size; ++i)
-			{
-				yield return new Tile();
-			}
-		}
-
-		public int SizeOfTile { get; internal set; }
-
-		internal Tile[,] tiles;
-
-		public bool IsAir { get; private set; }
-
-		public LargeTile(Tile[] tileArray, int tileSize)
-		{
-			SizeOfTile = tileSize;
-			tileSize /= 8;
-			tiles = new Tile[tileSize, tileSize];
-
-			int x = 0, y = 0;
-
-			IsAir = true;
-			for (int i = 0; i < tileSize * tileSize; ++i)
-			{
-				var currTile = tiles[x, y] = tileArray[i];
-				currTile.Unflip();
-
-				IsAir &= currTile.IsAir;
-
-				if (++x >= tileSize)
-				{
-					x = 0;
-					++y;
-				}
-			}
-		}
-		public LargeTile(int widthInTiles) : this(GetEmptyTiles(widthInTiles).ToArray(), widthInTiles << 3) { }
-		
-
-		public void Flip(FlipStyle flip)
-		{
-			if (flip == FlipStyle.X)
-			{
-				flipped ^= FlipStyle.X;
-				tiles.Flip(true);
-
-				foreach (var tile in tiles)
-					tile.Flip(FlipStyle.X);
-			}
-			else if (flip == FlipStyle.Y)
-			{
-				flipped ^= FlipStyle.Y;
-				tiles.Flip(false);
-
-				foreach (var tile in tiles)
-					tile.Flip(FlipStyle.Y);
-			}
-			else if (flip != FlipStyle.None)
-			{
-				Flip(FlipStyle.X);
-				Flip(FlipStyle.Y);
-			}
-		}
-		public void Unflip()
-		{
-			Flip(flipped);
-		}
-
-		public bool EqualTo(LargeTile other, FlipStyle flippable)
-		{
-			if (other == null || other.SizeOfTile != SizeOfTile)
-				return false;
-			if (ReferenceEquals(this, other))
-				return true;
-
-			Unflip();
-			other.Unflip();
-
-			var comparer = new CompareFlippable<Tile>(){flipStyle = flippable };
-
-			if (Enumerable.SequenceEqual(tiles.Cast<Tile>(), other.tiles.Cast<Tile>(), comparer))
-				return true;
-
-			// Check mirrored on X axis
-			if (flippable.HasFlag(FlipStyle.X))
-			{
-				Flip(FlipStyle.X);
-
-				if (Enumerable.SequenceEqual(tiles.Cast<Tile>(), other.tiles.Cast<Tile>(), comparer))
-					return true;
-
-				if (flippable.HasFlag(FlipStyle.Y))
-				{
-					Flip(FlipStyle.Y);
-
-					if (Enumerable.SequenceEqual(tiles.Cast<Tile>(), other.tiles.Cast<Tile>(), comparer))
-						return true;
-				}
-
-				Unflip();
-			}
-			// Check mirrored on the y axis only
-			if (flippable.HasFlag(FlipStyle.Y))
-			{
-				Flip(FlipStyle.Y);
-
-				if (Enumerable.SequenceEqual(tiles.Cast<Tile>(), other.tiles.Cast<Tile>(), comparer))
-					return true;
-			}
-
-			return false;
-		}
 		public FlipStyle GetFlipDifference(LargeTile other)
 		{
 			Unflip();
 			other.Unflip();
 
-			var comparer = new CompareFlippable<Tile>(){flipStyle = FlipStyle.Both };
-
-			if (Enumerable.SequenceEqual(tiles.Cast<Tile>(), other.tiles.Cast<Tile>(), comparer))
+			if (Enumerable.SequenceEqual(bitData, other.bitData))
 				return FlipStyle.None;
 
 			Flip(FlipStyle.X);
-			if (Enumerable.SequenceEqual(tiles.Cast<Tile>(), other.tiles.Cast<Tile>(), comparer))
+			if (Enumerable.SequenceEqual(bitData, other.bitData))
 				return FlipStyle.X;
 
 			Flip(FlipStyle.Y);
-			if (Enumerable.SequenceEqual(tiles.Cast<Tile>(), other.tiles.Cast<Tile>(), comparer))
+			if (Enumerable.SequenceEqual(bitData, other.bitData))
 				return FlipStyle.Both;
 
 			Flip(FlipStyle.X);
-			if (Enumerable.SequenceEqual(tiles.Cast<Tile>(), other.tiles.Cast<Tile>(), comparer))
+			if (Enumerable.SequenceEqual(bitData, other.bitData))
 				return FlipStyle.Y;
 
 			throw new Exception();
@@ -329,12 +359,27 @@ namespace Pixtro.Compiler
 		{
 			return (ushort)GetFlipDifference(other);
 		}
+
+		public override string ToString() {
+			var flipNow = flipped;
+
+			if (flipped != FlipStyle.None)
+				Unflip();
+
+			string retval = "";
+			for (int i = 0; i < bitData.Length; ++i) {
+				retval += bitData[i].ToString("X");
+			}
+
+			Flip(flipNow);
+
+			return retval;
+		}
 	}
 	public class Brick : LargeTile, IFlippable<Brick>
 	{
 		public char collisionChar;
 		public int collisionType, collisionShape, palette;
-
 
 		public Brick(int widthInTiles) : base(widthInTiles) { }
 		public Brick(Tile[] tileArray, int tileSize) : base(tileArray, tileSize) { }
@@ -352,6 +397,11 @@ namespace Pixtro.Compiler
 		public bool EqualTo(Brick other, FlipStyle flippable)
 		{
 			return base.EqualTo(other, flippable);
+		}
+		public bool EqualToFlipped(Brick other, FlipStyle flippable) {
+			if (collisionChar != other.collisionChar)
+				return false;
+			return base.EqualToFlipped(other, flippable);
 		}
 		public FlipStyle GetFlipDifference(Brick other)
 		{

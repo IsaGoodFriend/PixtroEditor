@@ -13,10 +13,10 @@ namespace Pixtro.Compiler {
 		public class TileWrapping {
 			// TODO: Create feature that lets users copy mapping data from one version to another
 
-			public int[] Palettes;
+			public int Palette;
 			public string Tileset;
 			public string MappingCopy;
-			public byte CollisionType;
+			public byte CollisionType = 1, CollisionShape;
 
 			public char[] Connections;
 			public Point[] Mapping;
@@ -85,13 +85,10 @@ namespace Pixtro.Compiler {
 			bricks.Add(brick);
 			int size = brick.SizeOfTile / 8;
 
-			for (int i = 0; i < size * size; ++i)
-			{
-				var tile = brick.tiles[i % size, i / size];
-
-				if (!tile.IsAir && !rawTiles.Contains(tile, new CompareFlippable<Tile>()))
-				{
-					rawTiles.Add(tile);
+			foreach (var tile in brick.tiles) {
+				if (!tile.IsAir && !rawTiles.Contains(tile, new CompareFlippable<Tile>())) {
+					tile.Unflip();
+					rawTiles.Add(new Tile(tile));
 				}
 			}
 			
@@ -225,9 +222,32 @@ namespace Pixtro.Compiler {
 				yield return 1;
 			}
 
-			for (int i = 0; i < layers; ++i)
-				foreach (var b in VisualLayer(i))
+			for (int i = 0; i < layers; ++i) {
+
+				var array = VisualLayer(i);
+				int len = array.Length;
+				int offset = 4 - ((array.Length + 3) & 0x3);
+				if (i == layers - 1)
+					offset = 0;
+				len += offset;
+
+				yield return (byte)(len & 0xFF);
+				yield return (byte)(len >> 8);
+
+				foreach (var b in array) {
 					yield return b;
+				}
+
+
+				if (i == layers - 1)
+					break;
+
+				for (int j = 0; j < offset; ++j) {
+					yield return 0xFF;
+				}
+
+				yield return 0x01;
+			}
 
 			foreach (var b in Entities())
 				yield return b;
@@ -249,13 +269,14 @@ namespace Pixtro.Compiler {
 			
 			yield break;
 		}
-		private IEnumerable<byte> VisualLayer(int layer) {
+		private byte[] VisualLayer(int layer) {
 			
 			int x, y;
 			
 			List<char> characters = new List<char>(DataParse.Wrapping.Keys);
 			Dictionary<char, uint[]> connect = new Dictionary<char, uint[]>();
 			LevelBrickset fullTileset = DataParse.fullTileset;
+
 
 			//if (DataParse.fullTileset != null)
 			//	fullTileset = DataParse.fullTileset;
@@ -342,7 +363,7 @@ namespace Pixtro.Compiler {
 					else
 					{
 						var wrapping = DataParse.Wrapping[currentTile];
-						LargeTile mappedTile;
+						Brick mappedTile;
 						LargeTile tile = null;
 
 						if (DataParse.tilesetFound.ContainsKey(wrapping.Tileset))
@@ -398,16 +419,23 @@ namespace Pixtro.Compiler {
 								break;
 							}
 
-							mappedTile = tileset.GetUniqueTile(tile??tileset.GetTile(0, 0));
+							mappedTile = fullTileset.GetBrick(tile, currentTile);// tileset.GetUniqueTile(tile??tileset.GetTile(0, 0));
 						}
 						else
 						{
-							mappedTile = new LargeTile(Settings.BrickTileSize * 8);
+							mappedTile = fullTileset.GetBrick(new LargeTile(Settings.BrickTileSize * 8), currentTile);
 							tile = new LargeTile(Settings.BrickTileSize * 8);
 						}
-						
 
-						retval = (ushort)((fullTileset.GetIndex(mappedTile, currentTile) + 1) | (tile.GetFlipOffset(mappedTile) << 10));
+						if (mappedTile == null) {
+							retval = 0;
+						}
+						else {
+							retval = (ushort)(fullTileset.GetIndex(mappedTile, currentTile) + 1);
+							ushort offset = (ushort)(tile.GetFlipOffset(mappedTile) << 10);
+							retval |= offset;
+							retval |= (ushort)(mappedTile.palette << 12);
+						}
 					}
 
 					retvalArray[count + 1] = (byte)(retval >> 8);
@@ -419,17 +447,7 @@ namespace Pixtro.Compiler {
 			}
 
 			count = 0;
-			retvalArray = LZUtil.Compress(retvalArray);
-			yield return (byte)(retvalArray.Length & 0xFF);
-			yield return (byte)(retvalArray.Length >> 8);
-
-			foreach (var b in retvalArray)
-			{
-				yield return b;
-				count++;
-			}
-
-			yield break;
+			return LZUtil.Compress(retvalArray);
 		}
 		private IEnumerable<byte> Entities() {
 			foreach (var ent in entities) {

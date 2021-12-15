@@ -36,6 +36,10 @@ namespace Pixtro.Compiler
 
 		public AsepriteReader.Tag[] SeparatedTags;
 
+		public string[] Palettes;
+		[JsonIgnore]
+		public List<Color[]> ColorPalettes;
+
 		public ImageMeta()
 		{
 			Ase = new AseMeta();
@@ -152,6 +156,14 @@ namespace Pixtro.Compiler
 					{
 						meta = new ImageMeta();
 					}
+					else {
+						if (meta.Palettes != null) {
+							meta.ColorPalettes = new List<Color[]>();
+							foreach (var str in meta.Palettes) {
+								meta.ColorPalettes.AddRange(CompiledPalettes[str]);
+							}
+						}
+					}
 
 					switch (localPath.Split('/')[0])
 					{
@@ -192,11 +204,11 @@ namespace Pixtro.Compiler
 						case ".png":
 							if (meta.Animated)
 							{
-								AddImageRange(localPath, name, GBAImage.AnimateFromFile(file, meta.AnimatedWidth, meta.AnimatedHeight));
+								AddImageRange(localPath, name, GBAImage.AnimateFromFile(file, meta.AnimatedWidth, meta.AnimatedHeight, meta.ColorPalettes));
 							}
 							else
 							{
-								AddImageRange(localPath, name, new GBAImage[] { GBAImage.FromFile(file) });
+								AddImageRange(localPath, name, new GBAImage[] { GBAImage.FromFile(file, meta.ColorPalettes) });
 							}
 							break;
 						default:
@@ -241,9 +253,6 @@ namespace Pixtro.Compiler
 
 			MainProgram.Log("Reading art assets");
 			CompileAllImages();
-
-			MainProgram.Log("Compiling Backgrounds");
-			CompileBackgrounds(artCompiler);
 
 			MainProgram.Log("Compiling sprites");
 			CompileSprites(artCompiler);
@@ -360,9 +369,11 @@ namespace Pixtro.Compiler
 					{
 						var usedTiles = wrap.TileMapping.Values.SelectMany(item => item).Distinct();
 
-						var tiles = parse.tilesetFound.ContainsKey(wrap.Tileset) ? parse.tilesetFound[ wrap.Tileset] : Sprites["tilesets_" + wrap.Tileset][0].GetLargeTileSet(Settings.BrickTileSize);
+						if (!parse.tilesetFound.ContainsKey(wrap.Tileset)) {
+							parse.tilesetFound[wrap.Tileset] = Sprites["tilesets_" + wrap.Tileset][0].GetLargeTileSet(Settings.BrickTileSize);
+						}
 
-						parse.tilesetFound[wrap.Tileset] = tiles;
+						FlippableLayout<LargeTile> tiles = parse.tilesetFound[wrap.Tileset];
 
 						// Iterate over the tilemapping points instead of the entire tileset so that the compiler only adds tiles that will likely be used.
 						foreach (var point in usedTiles)
@@ -375,6 +386,8 @@ namespace Pixtro.Compiler
 							var brick = new Brick(tile);
 							brick.collisionType = collType;
 							brick.collisionChar = key;
+							brick.collisionShape = wrap.CollisionShape;
+							brick.palette = wrap.Palette;
 
 							if (!fullTileset.Contains(brick))
 								fullTileset.AddNewBrick(brick);
@@ -421,22 +434,27 @@ namespace Pixtro.Compiler
 				{
 					for (int i = 0; i < size * size; ++i)
 					{
-						var mappedTile = tile.tiles[i % size, i / size];
+						var brickTile = tile.tiles[i % size, i / size];
 
-						Tile rawTile = null;
+						Tile mappedTile = null;
 
 						foreach (var rt in rawTiles)
 						{
-							if (mappedTile.EqualTo(rt, FlipStyle.Both))
+							if (brickTile.EqualTo(rt, FlipStyle.Both))
 							{
-								rawTile = rt;
+								mappedTile = rt;
 								break;
 							}
 						}
 
-						ushort value = (ushort)(rawTiles.IndexOf(rawTile, new CompareFlippable<Tile>()) + 1);
-						if (rawTile != null)
-							value |= (ushort)(mappedTile.GetFlipOffset(rawTile) << 10);
+						ushort value = 0;
+						if (mappedTile != null) {
+							value = (ushort)(rawTiles.IndexOf(mappedTile, new CompareFlippable<Tile>()) + 1);
+
+							ushort flip = (ushort)(brickTile.GetFlipOffset(mappedTile) << 10);
+							value |= flip;
+						}
+						
 						levelCompiler.AddValue(value);
 					}
 				}
@@ -585,36 +603,8 @@ namespace Pixtro.Compiler
 			}
 
 
-
-
-//#if !DEBUG
-//			bool needsRecompile = false;
-
-//			long editTime = File.GetLastWriteTime(toSavePath + "\\sprites.c").Ticks;
-
-//			string[] folders = new string[]{ "backgrounds", "palettes", "particles", "sprites", "titlecards" };
-
-//			foreach (var folder in folders)
-//			{
-//				if (!Directory.Exists(Path.Combine(artPath, folder)))
-//					continue;
-//				foreach (var file in Directory.GetFiles(Path.Combine(artPath, folder), "*", SearchOption.AllDirectories))
-//				{
-//					if (File.GetLastWriteTime(file).Ticks > editTime)
-//					{
-//						needsRecompile = true;
-//						break;
-//					}
-//				}
-//				if (needsRecompile)
-//					break;
-//			}
-//			if (!needsRecompile)
-//			{
-//				Compiler.Log("Skipping art compiling");
-//				return;
-//			}
-//#endif
+			MainProgram.Log("Compiling Backgrounds");
+			CompileBackgrounds(artCompiler);
 
 			MainProgram.Log("Saving source files");
 			levelCompiler.SaveTo(toSavePath, "levels");
@@ -954,6 +944,7 @@ namespace Pixtro.Compiler
 
 				string localPath = GetCompileName(file, ArtPath);
 				string cName = Regex.Replace(localPath, "^palettes_", "PAL_");
+				localPath = Regex.Replace(localPath, "^palettes_", "");
 
 				// Only compile one version of the palette
 				if (addedIn.Contains(localPath))
@@ -1032,7 +1023,7 @@ namespace Pixtro.Compiler
 				}
 
 				// Add the compiled palettes
-				CompiledPalettes.Add(GetCompileName(file, ArtPath), exported.ToArray());
+				CompiledPalettes.Add(localPath, exported.ToArray());
 
 				addedIn.Add(localPath);
 

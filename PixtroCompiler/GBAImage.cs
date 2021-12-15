@@ -20,6 +20,8 @@ namespace Pixtro.Compiler {
 				B = 0;
 			}
 		}
+		public FloatColor(Color color) : this(color.R, color.G, color.B, color.A) {
+		}
 
 		public static FloatColor FlattenColor(FloatColor colorA, FloatColor colorB, BlendType blend) {
 			FloatColor color = colorA;
@@ -58,9 +60,9 @@ namespace Pixtro.Compiler {
 				return Color.FromArgb(0, 0, 0, 0);
 			}
 
-			byte r = (byte)(Math.Floor(R * 31) * 4);
-			byte g = (byte)(Math.Floor(G * 31) * 4);
-			byte b = (byte)(Math.Floor(B * 31) * 4);
+			byte r = (byte)(Math.Floor(R * 255/8f) * 8);
+			byte g = (byte)(Math.Floor(G * 255/8f) * 8);
+			byte b = (byte)(Math.Floor(B * 255/8f) * 8);
 
 			return Color.FromArgb(255, r, g, b);
 		}
@@ -88,7 +90,7 @@ namespace Pixtro.Compiler {
 
 		}
 
-		private unsafe static GBAImage FromBitmap(Bitmap map, Rectangle section)
+		private unsafe static GBAImage FromBitmap(Bitmap map, Rectangle section, List<Color[]> palettes)
 		{
 			FloatColor[,] values = new FloatColor[section.Width, section.Height];
 
@@ -108,9 +110,9 @@ namespace Pixtro.Compiler {
 			
 			map.UnlockBits(data);
 
-			return new GBAImage(values);
+			return new GBAImage(values, palettes);
 		}
-		private unsafe static GBAImage FromBitmap(byte* ptr, int stride, Rectangle section) {
+		private unsafe static GBAImage FromBitmap(byte* ptr, int stride, Rectangle section, List<Color[]> palettes) {
 			FloatColor[,] values = new FloatColor[section.Width, section.Height];
 
 			for (int y = section.Top; y < section.Bottom; ++y) {
@@ -121,32 +123,32 @@ namespace Pixtro.Compiler {
 				}
 			}
 
-			return new GBAImage(values);
+			return new GBAImage(values, palettes);
 		}
 
-		public static GBAImage FromFile(string path)
+		public static GBAImage FromFile(string path, List<Color[]> palettes)
 		{
 			Bitmap map = GetFormattedBitmap(path);
 
 			if (map.Width % 8 != 0 || map.Height % 8 != 0)
-				throw new Exception();
+				throw new FormatException("Image is not the correct size.  Make sure all your images width/height are divisible by 8");
 
-			var image = FromBitmap(map, new Rectangle(0, 0, map.Width, map.Height));
+			var image = FromBitmap(map, new Rectangle(0, 0, map.Width, map.Height), palettes);
 
 			map.Dispose();
 
 			return image;
 		}
-		public unsafe static GBAImage[] AnimateFromFile(string path, int width, int height)
+		public unsafe static GBAImage[] AnimateFromFile(string path, int width, int height, List<Color[]> palettes)
 		{
 			if (width % 8 != 0 || height % 8 != 0)
-				throw new Exception();
+				throw new FormatException("Image is not the correct size.  Make sure all your images width/height are divisible by 8");
 
 			Bitmap map = GetFormattedBitmap(path);
 
 			// Throw error if file can't be divided evenly
 			if (map.Width % width != 0 || map.Width % height != 0)
-				throw new Exception();
+				throw new FormatException("Image cannot be divided properly for animation.  Make sure your animated images have all frames in full");
 
 			int frameX = map.Width / width,
 				frameY = map.Height / height;
@@ -163,7 +165,7 @@ namespace Pixtro.Compiler {
 			{
 				for (int x = 0; x < frameX; ++x)
 				{
-					images.Add(FromBitmap(ptr, data.Stride, new Rectangle(x * width, y * height, width, height)));
+					images.Add(FromBitmap(ptr, data.Stride, new Rectangle(x * width, y * height, width, height), palettes));
 				}
 			}
 
@@ -212,7 +214,7 @@ namespace Pixtro.Compiler {
 
 			// Angry.  You didn't feed me a properly formatted image
 			if (reader.Width % 8 != 0 || reader.Height % 8 != 0)
-				throw new Exception();
+				throw new FormatException("Aseprite image is not the correct size.  Make sure all your images width/height are divisible by 8");
 
 
 			int start = 0, end = reader.FrameCount;
@@ -316,9 +318,16 @@ namespace Pixtro.Compiler {
 
 			if (exportPalettes != null)
 			{
+				palettes.Clear();
 				foreach (var pal in exportPalettes)
 				{
-					palettes.Add(pal.Select(val => (Color?)val).ToArray());
+					pal[0] = Color.Transparent;
+					var newPal = pal.Select(val => {
+						var c = new FloatColor(val).ToGBAColor();
+						return (Color?)c;
+						}
+					).ToArray();
+					palettes.Add(newPal);
 				}
 				palettesLocked = true;
 			}
@@ -349,7 +358,13 @@ namespace Pixtro.Compiler {
 
 						foreach (var col in palette)
 						{
-							if (!pal.ContainsValue(col))
+							int i = 0;
+							for (; i < pal.Length; ++i) {
+								if (pal[i].HasValue && (pal[i].Value == col || (pal[i].Value.A == 0 && col.A == 0))) {
+									break;
+								}
+							}
+							if (i == pal.Length)
 							{
 								foundPalette = null;
 								break;
@@ -366,7 +381,7 @@ namespace Pixtro.Compiler {
 					if (paletteIndex == palettes.Count)
 					{
 						if (palettesLocked)
-							throw new Exception();
+							throw new Exception("The images palettes have already been chosen, but no palette given is suitable to import the image.  Make sure the color are exact.");
 
 						paletteIndex = 0;
 
@@ -506,7 +521,7 @@ namespace Pixtro.Compiler {
 				{
 					for (int y = 0; y < tileSize; ++y)
 					{
-						for (int x = 0; x < tileSize; ++x)
+						for (int x = tileSize - 1; x >= 0; --x)
 						{
 							dumpValue <<= 4;
 							dumpValue |= (uint)baseValues[tx + x, ty + y] & 0xF;
