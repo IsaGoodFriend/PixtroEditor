@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
+using Pixtro.Editor;
 
 namespace Pixtro.Projects {
 	public sealed class ProjectInfo : IDisposable {
@@ -14,13 +15,15 @@ namespace Pixtro.Projects {
 		public static bool Building => buildThread != null && buildThread.IsAlive;
 		public static bool BuildSuccess { get; private set; }
 
-		public static event Action OnSuccessfulBuild;
+		private static event Action OnSuccessfulBuild;
 
 		public static void OpenProject(string filePath) {
 			if (CurrentProject != null) {
 				CurrentProject.Dispose();
 			}
 			CurrentProject = new ProjectInfo(filePath);
+
+			filePath = Path.GetDirectoryName(filePath);
 		}
 
 		public static void BuildProject(bool release) {

@@ -11,6 +11,15 @@ namespace Pixtro.Emulation
 {
 	public sealed class GameCommunicator
 	{
+		private struct EmulatorRange : Range<long> {
+			public EmulatorRange(long start, long length) {
+				Start = start;
+				EndInclusive = start + length - 1;
+			}
+			public long Start { get; set; }
+
+			public long EndInclusive { get; set; }
+		}
 		private const int 
 			EWRam_Address = 2,
 			IWRam_Address = 3,
@@ -60,51 +69,79 @@ namespace Pixtro.Emulation
 
 			public byte GetByte(int index)
 			{
-				if (size > 0 && index > size || index < 0)
+				if (index > size || index < 0)
 					throw new IndexOutOfRangeException();
 
 				return domain.PeekByte(index + address);
 			}
 			public void SetByte(int index, byte val)
 			{
-				if (size > 0 && index > size || index < 0)
+				if (index > size || index < 0)
 					throw new IndexOutOfRangeException();
 
 				domain.PokeByte(index + address, val);
 			}
+			public byte[] GetByteArray(int index, int length) {
+				if (index > size || index < 0)
+					throw new IndexOutOfRangeException();
+
+				byte[] retval = new byte[length];
+
+				domain.BulkPeekByte(new EmulatorRange(index, length), retval);
+
+				return retval;
+			}
 			public ushort GetUshort(int index)
 			{
-				index >>= 1;
-				if (size > 0 && index > size || index < 0)
+				if (index > size || index < 0)
 					throw new IndexOutOfRangeException();
 
 				return domain.PeekUshort(index + address, BigEndian);
 			}
 			public void SetUshort(int index, ushort val)
 			{
-				index >>= 1;
-				if (size > 0 && index > size || index < 0)
+				if (index > size || index < 0)
 					throw new IndexOutOfRangeException();
 
 				domain.PokeUshort(index + address, val, BigEndian);
 			}
+			public short GetShort(int index) {
+				if (index > size || index < 0)
+					throw new IndexOutOfRangeException();
+
+				return (short)domain.PeekUshort(index + address, BigEndian);
+			}
+			public void SetShort(int index, short val) {
+				if (index > size || index < 0)
+					throw new IndexOutOfRangeException();
+
+				domain.PokeUshort(index + address, (ushort)val, BigEndian);
+			}
 			public uint GetUint(int index)
 			{
-				index >>= 2;
-				if (size > 0 && index > size || index < 0)
+				if (index > size || index < 0)
 					throw new IndexOutOfRangeException();
 
 				return domain.PeekUint(index + address, BigEndian);
 			}
 			public void SetUint(int index, uint val)
 			{
-				index >>= 2;
 				if (index > size || index < 0)
 					throw new IndexOutOfRangeException();
 
 				domain.PokeUint(index + address, val, BigEndian);
+			}
+			public int GetInt(int index) {
+				if (index > size || index < 0)
+					throw new IndexOutOfRangeException();
 
-				uint value = domain.PeekUint(index + address, BigEndian);
+				return (int)domain.PeekUint(index + address, BigEndian);
+			}
+			public void SetInt(int index, int val) {
+				if (index > size || index < 0)
+					throw new IndexOutOfRangeException();
+
+				domain.PokeUint(index + address, (uint)val, BigEndian);
 			}
 
 			public bool GetFlag(int flag, int offset = 0)

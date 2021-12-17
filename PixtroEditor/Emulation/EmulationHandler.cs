@@ -83,6 +83,10 @@ namespace Pixtro.Emulation {
 					buffer[i] |= (val & 0xFF0000) >> 16;
 				}
 
+				if (MInput.Keyboard.Check(Microsoft.Xna.Framework.Input.Keys.Q)) {
+					LevelDataInGame(0, true);
+				}
+
 				if (Communication.debug_engine_flags.GetFlag(GameToEditorFlags.PrintLevelData)) {
 
 				}
@@ -94,6 +98,24 @@ namespace Pixtro.Emulation {
 			}
 
 			return buffer;
+		}
+
+		
+
+		public static byte[] LevelDataInGame(int levelIndex, bool aSection) {
+			var gc = GameCommunicator.Instance;
+
+			var map = aSection ? gc.loaded_levels_a : gc.loaded_levels_b;
+			int index = map.GetInt(levelIndex) & ~(aSection ? 0x2020000 : 0x2030000);
+
+			int width = gc.LevelRegion.GetUshort(index);
+			int height = gc.LevelRegion.GetUshort(index + 2);
+
+			index += 4;
+
+			return gc.LevelRegion.GetByteArray(index, width * height * 2);
+
+			return null;
 		}
 
 		private static void SetEmptyBuffer() {

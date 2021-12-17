@@ -1,10 +1,11 @@
-﻿using System.Linq;
+﻿using System.IO;
+using System.Text;
+using System.Collections.Generic;
 using System;
 using Monocle;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Pixtro.Editor;
-using Pixtro.UI;
 
 namespace Pixtro.Scenes {
 	public enum LevelEditorStates {
@@ -13,6 +14,146 @@ namespace Pixtro.Scenes {
 		Erase,
 		Rectangle,
 		Pan,
+	}
+	public class LevelContainer {
+		public enum LevelSaveType {
+			TextFile,
+			Binary,
+			Json,
+			Tiled_XML,
+		}
+		public class TileLayer {
+			public VirtualMap<char> tiles;
+
+			public TileLayer(int width, int height) : this(width, height, ' ') {
+			}
+			public TileLayer(int width, int height, char empty) {
+				tiles = new VirtualMap<char>(width, height, empty);
+			}
+			public TileLayer(char[,] data) {
+				tiles = new VirtualMap<char>(data);
+			}
+		}
+		public class EntityLayer {
+			public class Entity {
+
+				public string entType;
+
+				public int X, Y;
+
+				public List<string> metaData;
+			}
+
+			public List<Entity> entities;
+		}
+
+		private LevelSaveType saveType;
+		private string savePath;
+
+		public Dictionary<int, string> metaData;
+		public List<TileLayer> tileMaps;
+		public EntityLayer entities;
+
+		public int Width { get; private set; }
+		public int Height { get; private set; }
+
+		//public LevelContainer(int level, bool aSection) {
+
+		//}
+		public LevelContainer(string path) {
+			string ext = Path.GetExtension(path);
+
+			metaData = new Dictionary<int, string>();
+			tileMaps = new List<TileLayer>();
+			entities = new EntityLayer();
+
+			switch (ext) {
+				case ".txt":
+					saveType = LevelSaveType.TextFile;
+
+					break;
+			}
+		}
+		public LevelContainer(LevelSaveType saveType, int width, int height, int layerCount) {
+			this.saveType = saveType;
+
+			metaData = new Dictionary<int, string>();
+			
+			tileMaps = new List<TileLayer>();
+			for (int i = 0; i < layerCount; ++i)
+				tileMaps.Add(new TileLayer(width, height));
+
+			entities = new EntityLayer();
+
+			Width = width;
+			Height = height;
+
+		}
+
+		private void Save(LevelSaveType saveType) {
+
+			using (Stream s = File.Open(savePath, FileMode.Create)) {
+
+				switch (saveType) {
+					case LevelSaveType.TextFile: {
+
+						StreamWriter sw = new StreamWriter(s);
+
+						sw.WriteLine($"{Width} - {Height} - {tileMaps.Count}");
+
+						sw.WriteLine("meta");
+						foreach (var m in metaData) {
+							sw.WriteLine($"{m.Key} ; {m.Value}");
+						}
+						sw.WriteLine("end");
+
+						for (int i = 0; i < tileMaps.Count; ++i) {
+
+							var map = tileMaps[i];
+							sw.WriteLine($"layer - {i}");
+
+							for (int y = 0; y < Height; ++y) {
+								StringBuilder sb = new StringBuilder();
+
+								for (int x = 0; x < Width; ++x) {
+									sb.Append(map.tiles[x, y]);
+								}
+
+								sw.Write(sb.ToString());
+							}
+
+							sw.WriteLine("end");
+						}
+
+						sw.WriteLine("entities");
+
+						foreach (var ent in entities.entities) {
+							sw.Write($"{ent.entType};{ent.X};{ent.Y}");
+
+							foreach (var m in ent.metaData) {
+								sw.Write($";{m}");
+							}
+							sw.WriteLine();
+						}
+
+						sw.WriteLine("end");
+
+						break;
+					}
+					
+				}
+			}
+		}
+		public void Save() {
+			if (savePath == null)
+				return;
+			SaveAs(savePath);
+		}
+		public void SaveAs(string path) {
+			savePath = path;
+
+			Save(saveType);
+		}
 	}
 	public class LevelEditorScene : Scene {
 
@@ -25,10 +166,10 @@ namespace Pixtro.Scenes {
 			4f,
 			6f,
 			8f,
-
 		};
+		//public static LevelContainer CurrentLevel { get; private set; }
 
-		private const int ZOOM_START = 3; // Index of value 2
+		private const int ZOOM_START = 2;
 		private const int TileSize = 8;
 		private const int tempCountW = 30, tempCountH = 20;
 
@@ -39,9 +180,11 @@ namespace Pixtro.Scenes {
 		private Tileset testTileset;
 		private int zoomIndex;
 
+		public LevelContainer MainLevel { get; private set; }
+
 		public LevelEditorScene() {
-			Camera.Zoom = 2;
-			zoomIndex = Array.IndexOf(ZOOM_LEVELS, 2);
+			Camera.Zoom = ZOOM_START;
+			zoomIndex = Array.IndexOf(ZOOM_LEVELS, ZOOM_START);
 
 			rawTilemap = new VirtualMap<int>(tempCountW, tempCountH, 0);
 
@@ -212,6 +355,7 @@ namespace Pixtro.Scenes {
 
 		public override void OnResize() {
 			base.OnResize();
+
 
 			Camera.Position -= new Vector2((VisualBounds.Width - PreviousBounds.Width) / 2f, (VisualBounds.Height - PreviousBounds.Height) / 2f) / Camera.Zoom;
 		}

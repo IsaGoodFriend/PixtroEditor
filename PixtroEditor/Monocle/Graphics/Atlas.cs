@@ -272,6 +272,9 @@ namespace Monocle {
 			var contentDirectory = Engine.ContentDirectory;
 			var contentDirectoryLength = contentDirectory.Length;
 			var contentPath = Path.Combine(contentDirectory, path);
+			if (path.EndsWith(".pxprj")) {
+				contentPath = Path.Combine(Path.GetDirectoryName(path), "art");
+			}
 			var contentPathLength = contentPath.Length;
 
 			if (Directory.Exists(contentPath)) {
@@ -279,7 +282,7 @@ namespace Monocle {
 				foreach (var file in Directory.GetFiles(contentPath, "*", SearchOption.AllDirectories)) {
 
 					var ext = Path.GetExtension(file);
-					if (ext != ".png" && ext != ".xnb")
+					if (ext != ".png" && ext != ".bmp" && ext != ".xnb")
 						continue;
 
 					// make nice for dictionary
@@ -301,7 +304,7 @@ namespace Monocle {
 					atlas.Sources.Add(texture);
 
 					// load
-					atlas.textures.Add(filepath, new MTexture(texture));
+					atlas.textures.Add(filepath, new MTexture(texture).GetSubtexture(0, 0, texture.Width, texture.Height));
 
 				}
 			}

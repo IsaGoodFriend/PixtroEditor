@@ -29,8 +29,7 @@ namespace Monocle {
 		}
 
 		public MTexture(MTexture parent, int x, int y, int width, int height) {
-			Texture = parent.Texture;
-			_originalTexture = Texture;
+			Parent = parent;
 			AtlasPath = null;
 
 			ClipRect = parent.GetRelativeRect(x, y, width, height);
@@ -46,8 +45,7 @@ namespace Monocle {
 		}
 
 		public MTexture(MTexture parent, string atlasPath, Rectangle clipRect, Vector2 drawOffset, int width, int height) {
-			Texture = parent.Texture;
-			_originalTexture = Texture;
+			Parent = parent;
 			AtlasPath = atlasPath;
 
 			ClipRect = parent.GetRelativeRect(clipRect);
@@ -125,10 +123,15 @@ namespace Monocle {
 			return new MTexture(this, rect);
 		}
 
-		public void ApplyPalette(Texture2D palette) {
+		public void ApplyPalette(Texture2D palette, Texture2D importPalette) {
+			if (Parent != null) {
+				Parent.ApplyPalette(palette, importPalette);
+				return;
+			}
 			Texture2D newTex = new Texture2D(_originalTexture.GraphicsDevice, Width, Height);
 
 			uint[] data = new uint[Width * Height], palData = new uint[palette.Width * 2];
+
 			_originalTexture.GetData(data);
 			palette.GetData(palData);
 
@@ -147,9 +150,6 @@ namespace Monocle {
 
 			Texture = newTex;
 		}
-		public void ApplyPalette(MTexture palette) {
-			ApplyPalette(palette.Texture);
-		}
 
 		public void Dispose() {
 			Texture.Dispose();
@@ -157,7 +157,20 @@ namespace Monocle {
 
 		#region Properties
 
-		public Texture2D Texture { get; private set; }
+		public MTexture Parent { get; private set; }
+		public Texture2D Texture {
+			get {
+				if (Parent != null)
+					return Parent.Texture;
+				else
+					return texture;
+			}
+			set {
+				if (Parent == null)
+					texture = value;
+			}
+		}
+		private Texture2D texture;
 		private Texture2D _originalTexture;
 		public Rectangle ClipRect { get; private set; }
 		public string AtlasPath { get; private set; }

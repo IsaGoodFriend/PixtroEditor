@@ -48,6 +48,8 @@ namespace Pixtro.Editor {
 			base.LoadContent();
 
 			Atlases.EngineGraphics = Atlas.FromDirectory("Graphics");
+			string path = Path.GetDirectoryName(Projects.ProjectInfo.CurrentProject.ProjectPath);
+			Atlases.GameSprites = Atlas.FromDirectory(Projects.ProjectInfo.CurrentProject.ProjectPath);
 		}
 
 		protected override void Update(GameTime gameTime) {
