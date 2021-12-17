@@ -213,9 +213,9 @@ void protect_cam()
 		if (cam_y < Y_TILE_BUFFER)
 			cam_y = Y_TILE_BUFFER;
 
-		if (cam_x + 240 - X_TILE_BUFFER > BLOCK2INT(lvl_width))
+		if (cam_x + 240 + X_TILE_BUFFER > BLOCK2INT(lvl_width))
 			cam_x = BLOCK2INT(lvl_width) - 240 - X_TILE_BUFFER;
-		if (cam_y + 160 - Y_TILE_BUFFER > BLOCK2INT(lvl_height))
+		if (cam_y + 160 + Y_TILE_BUFFER > BLOCK2INT(lvl_height))
 			cam_y = BLOCK2INT(lvl_height) - 160 - Y_TILE_BUFFER;
 	}
 
