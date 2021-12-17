@@ -207,19 +207,11 @@ namespace Pixtro.Compiler {
 #endif
 
             if (Error) {
-                WarningOutput = null;
-                ErrorOutput = null;
-                StandardOutput = null;
-
-                return false;
+                return ReturnValue();
             }
 
             if (Settings.EnginePath.Contains(" ") || Settings.GamePath.Contains(" ") || Settings.ProjectPath.Contains(" ")) {
-                WarningOutput = null;
-                ErrorOutput = null;
-                StandardOutput = null;
-
-                return false;
+                return ReturnValue();
             }
 
             CopyMakefile();
@@ -366,11 +358,18 @@ namespace Pixtro.Compiler {
 
             cmd.WaitForExit();
 
+            return ReturnValue();
+        }
+
+        private static bool ReturnValue() {
+
             WarningOutput = null;
             ErrorOutput = null;
             StandardOutput = null;
 
-            return File.Exists(Settings.GamePath + ".gba");
+            GC.Collect();
+
+            return !Error && File.Exists(Settings.GamePath + ".gba");
         }
 
         public static void ErrorLog(object log) {

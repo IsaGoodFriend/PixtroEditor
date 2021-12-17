@@ -495,7 +495,7 @@ namespace Pixtro.Compiler
 					entLocalCount = 0;
 					typeLocalCount.Clear();
 
-					CompiledLevel.RNGSeed = (uint)new Random(localPath.GetHashCode()).Next(0x800, 0xFFFFFF);
+					CompiledLevel.RNGSeed = new Random(localPath.GetHashCode()).Next(int.MaxValue >> 16, int.MaxValue);
 
 					switch (ext)
 					{

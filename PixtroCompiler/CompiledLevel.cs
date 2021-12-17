@@ -124,17 +124,12 @@ namespace Pixtro.Compiler {
 	}
 	public class CompiledLevel {
 
-		private const int multValue = 57047;
+		private const int rng_value1 = 374761393, rng_value2 = 668265263, rng_value3 = 1274126177;
 
-		public static uint RNGSeed;
-		private static int RandomFromPoint(Point point)
+		public static int RNGSeed;
+		public static int RandomFromPoint(Point point, int min, int max)
 		{
-			ulong tempVal = (ulong)(RNGSeed + (uint)point.X);
-			tempVal = (tempVal * multValue) % int.MaxValue;
-			tempVal += (ulong)point.Y;
-			tempVal = (tempVal * multValue) % int.MaxValue;
-
-			return (int)tempVal;
+			return Randomizer.Next(min, max);
 		}
 
 		public static Random Randomizer;
@@ -395,7 +390,7 @@ namespace Pixtro.Compiler {
 								if ((testValue & (value)) != 0)
 									continue;
 
-								var point = wrapping.TileMapping[key].GetValueWrapped(RandomFromPoint(new Point(x, y)));
+								var point = wrapping.TileMapping[key][RandomFromPoint(new Point(x, y), 0, wrapping.TileMapping[key].Length)];
 
 								if (wrapping.Offsets != null)
 									foreach (var o in wrapping.Offsets.Keys)
