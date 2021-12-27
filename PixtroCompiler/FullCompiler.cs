@@ -297,9 +297,6 @@ namespace Pixtro.Compiler
 				}
 			}
 
-			// Todo: allow custom seeds to get consistent result
-			CompiledLevel.Randomizer = new Random();
-
 			// Go through each level pack and figure out which levels are used and where
 			foreach (var pack in Directory.GetFiles(Path.Combine(Settings.ProjectPath, LevelPackPath)))
 			{
@@ -495,7 +492,7 @@ namespace Pixtro.Compiler
 					entLocalCount = 0;
 					typeLocalCount.Clear();
 
-					CompiledLevel.RNGSeed = new Random(localPath.GetHashCode()).Next(int.MaxValue >> 16, int.MaxValue);
+					CompiledLevel.Randomizer = new Random(new Random(localPath.GetHashCode()).Next(int.MaxValue >> 16, int.MaxValue));
 
 					switch (ext)
 					{
