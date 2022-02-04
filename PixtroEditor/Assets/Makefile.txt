@@ -67,9 +67,9 @@ ifneq ($(BUILD),$(notdir $(CURDIR)))
 #---------------------------------------------------------------------------------
 
 export VPATH	:= \
+			$(ENGINE)/src \
 			$(foreach dir,$(DATA),$(CURDIR)/$(dir)) \
 			$(foreach dir,$(GRAPHICS),$(CURDIR)/$(dir)) \
-			$(ENGINE)/src \
 			$(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 			
 SOURCES += $(ENGINE)/src
@@ -108,10 +108,11 @@ export OFILES := $(OFILES_BIN) $(OFILES_SOURCES)
 
 export HFILES := $(addsuffix .h,$(subst .,_,$(BINFILES)))
 
-export INCLUDE	:=	$(foreach dir,$(INCLUDES),-iquote $(CURDIR)/$(dir)) \
+export INCLUDE	:=	\
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 					-I$(CURDIR)/$(BUILD) \
-					-I$(ENGINE)/src
+					-I$(ENGINE)/src \
+					$(foreach dir,$(INCLUDES),-iquote $(CURDIR)/$(dir))
 
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 

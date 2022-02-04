@@ -68,7 +68,7 @@ int cam_x, cam_y, prev_cam_x, prev_cam_y;
 int sprite_count, prev_sprite_count;
 int affine_count;
 
-#define TILE_INFO ((unsigned short *)0x02002000)
+#define TILE_INFO ((unsigned short *)0x0201E000)
 
 #define BANK_LIMIT 64
 #define BANK_MEM_START 0x60
@@ -216,17 +216,17 @@ void unload_sprite(int index)
 }
 
 #ifdef LARGE_TILES
-void load_tileset(unsigned int *tiles, unsigned short *mapping, unsigned int *collision, int count)
+void load_tileset(unsigned int *tiles, unsigned short *mapping, unsigned int *collision, int count, int uvcount)
 {
 	memcpy(&tile_mem[FG_TILESET][1], tiles, count << 7);
-	memcpy(TILE_INFO, mapping, count << 3);
+	memcpy(TILE_INFO + 1, mapping, uvcount << 3);
 	load_tiletypes(collision);
 }
 #else
-void load_tileset(unsigned int *tiles, unsigned short *mapping, unsigned int *collision, int count)
+void load_tileset(unsigned int *tiles, unsigned short *mapping, unsigned int *collision, int count, int uvcount)
 {
 	memcpy(&tile_mem[FG_TILESET][1], tiles, count << 5);
-	memcpy(TILE_INFO, mapping, count << 1);
+	memcpy(TILE_INFO + 1, mapping, uvcount << 1);
 	load_tiletypes(collision);
 }
 #endif

@@ -386,8 +386,7 @@ namespace Pixtro.Compiler
 							brick.collisionShape = wrap.CollisionShape;
 							brick.palette = wrap.Palette;
 
-							if (!fullTileset.Contains(brick))
-								fullTileset.AddNewBrick(brick);
+							fullTileset.AddNewBrick(brick);
 						}
 					}
 					else // If the tileset doesn't exist, add an empty tile for the wrapping character
@@ -399,8 +398,7 @@ namespace Pixtro.Compiler
 						brick.collisionType = collType;
 						brick.collisionChar = key;
 
-						if (!fullTileset.Contains(brick))
-							fullTileset.AddNewBrick(brick);
+						fullTileset.AddNewBrick(brick);
 					}
 				}
 				int length = fullTileset.RawTiles.Count;
@@ -427,8 +425,11 @@ namespace Pixtro.Compiler
 				// Compile each brick's "uv" mapping, aka how each raw tile fits into this tileset
 				levelCompiler.BeginArray(CompileToC.ArrayType.UShort, "TILE_MAPPING_" + parse.Name);
 				int size = Settings.BrickTileSize;
+				int count = 0;
 				foreach (var tile in fullTileset)
 				{
+					++count;
+
 					for (int i = 0; i < size * size; ++i)
 					{
 						var brickTile = tile.tiles[i % size, i / size];
@@ -459,6 +460,7 @@ namespace Pixtro.Compiler
 
 				// Define how many tiles are in the compiled tileset
 				levelCompiler.AddValueDefine($"TILESET_{parse.Name}_len", length);
+				levelCompiler.AddValueDefine($"TILESET_{parse.Name}_uvlen", count);
 
 				parse.fullTileset = fullTileset;
 

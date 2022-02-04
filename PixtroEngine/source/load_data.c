@@ -28,7 +28,7 @@
 
 #define BGOFS ((vu16 *)(REG_BASE + 0x0010))
 
-#define TILE_INFO ((unsigned short *)0x02010000)
+#define TILE_INFO ((unsigned short *)0x0201E000)
 
 #define LEVEL_REGION_A (unsigned short *)0x02020000
 #define LEVEL_REGION_B (unsigned short *)0x02030000
@@ -540,11 +540,12 @@ void move_cam()
 			{
 				position = VIS_BLOCK_POS(startX, min);
 
-				foreground[position] = tileset_data[startX + (min * lvl_width)];
-				if (midground)
-					midground[position] = tileset_data[startX + (min * lvl_width) + 0x2000];
-				if (background)
-					background[position] = tileset_data[startX + (min * lvl_width) + 0x4000];
+				foreground[position] = TILE_INFO[tileset_data[startX + (min * lvl_width)] & 0xFFF] | (tileset_data[startX + (min * lvl_width)] & 0xF000);
+
+				// if (midground)
+				// 	midground[position] = tileset_data[startX + (min * lvl_width) + 0x2000];
+				// if (background)
+				// 	background[position] = tileset_data[startX + (min * lvl_width) + 0x4000];
 			}
 			startX += dirX;
 		}
@@ -559,11 +560,12 @@ void move_cam()
 			{
 				position = VIS_BLOCK_POS(min, startY);
 
-				foreground[position] = tileset_data[min + (startY * lvl_width)];
-				if (midground)
-					midground[position] = tileset_data[min + (startY * lvl_width) + 0x2000];
-				if (background)
-					background[position] = tileset_data[min + (startY * lvl_width) + 0x4000];
+				foreground[position] = TILE_INFO[tileset_data[min + (startY * lvl_width)] & 0xFFF] | (tileset_data[min + (startY * lvl_width)] & 0xF000);
+
+				// if (midground)
+				// 	midground[position] = tileset_data[min + (startY * lvl_width) + 0x2000];
+				// if (background)
+				// 	background[position] = tileset_data[min + (startY * lvl_width) + 0x4000];
 			}
 			startY += dirY;
 		}
@@ -615,16 +617,12 @@ void reset_cam()
 
 		for (; idx > 0; idx--)
 		{
-			foreground[p1 + idx] = tileset_data[p2 + idx];
-			if (midground)
-				midground[p1 + idx] = tileset_data[p2 + 0x2000 + idx];
-			if (background)
-				background[p1 + idx] = tileset_data[p2 + 0x4000 + idx];
-			// memcpy(&foreground[p1], &tileset_data[p2], 64 - (x << 1));
+			foreground[p1 + idx] = TILE_INFO[tileset_data[p2 + idx] & 0xFFF] | (tileset_data[p2 + idx] & 0xF000);
+
 			// if (midground)
-			// 	memcpy(&midground[p1], &tileset_data[p2 + 0x2000], 64 - (x << 1));
+			// 	midground[p1 + idx] = tileset_data[p2 + 0x2000 + idx];
 			// if (background)
-			// 	memcpy(&background[p1], &tileset_data[p2 + 0x4000], 64 - (x << 1));
+			// 	background[p1 + idx] = tileset_data[p2 + 0x4000 + idx];
 		}
 
 		p1 &= 0xFE0;
@@ -632,24 +630,13 @@ void reset_cam()
 
 		for (idx = x; idx > 0; idx--)
 		{
-			foreground[p1 + idx] = tileset_data[p2 + idx];
-			if (midground)
-				midground[p1 + idx] = tileset_data[p2 + 0x2000 + idx];
-			if (background)
-				background[p1 + idx] = tileset_data[p2 + 0x4000 + idx];
+			foreground[p1 + idx] = TILE_INFO[tileset_data[p2 + idx] & 0xFFF] | (tileset_data[p2 + idx] & 0xF000);
 
-			// memcpy(&foreground[p1], &tileset_data[p2], 64 - (x << 1));
 			// if (midground)
-			// 	memcpy(&midground[p1], &tileset_data[p2 + 0x2000], 64 - (x << 1));
+			// 	midground[p1 + idx] = tileset_data[p2 + 0x2000 + idx];
 			// if (background)
-			// 	memcpy(&background[p1], &tileset_data[p2 + 0x4000], 64 - (x << 1));
+			// 	background[p1 + idx] = tileset_data[p2 + 0x4000 + idx];
 		}
-
-		// memcpy(&foreground[p1], &tileset_data[p2], x << 1);
-		// if (midground)
-		// 	memcpy(&midground[p1], &tileset_data[p2 + 0x2000], (x << 1));
-		// if (background)
-		// 	memcpy(&background[p1], &tileset_data[p2 + 0x4000], (x << 1));
 	}
 
 skip_loadcam:

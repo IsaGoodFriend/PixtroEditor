@@ -78,12 +78,14 @@ namespace Pixtro.Compiler {
 
 		public bool Contains(Brick brick)
 		{
-			return bricks.Contains(brick, new CompareFlippable<Brick>());
+			return bricks.Contains(brick, new CompareFlippable<Brick>() { flipStyle = FlipStyle.None } );
 		}
 		public void AddNewBrick(Brick brick)
 		{
+			if (bricks.Contains(brick, new CompareFlippable<Brick>() { flipStyle = FlipStyle.None }))
+				return;
+
 			bricks.Add(brick);
-			int size = brick.SizeOfTile / 8;
 
 			foreach (var tile in brick.tiles) {
 				if (!tile.IsAir && !rawTiles.Contains(tile, new CompareFlippable<Tile>())) {
@@ -107,7 +109,7 @@ namespace Pixtro.Compiler {
 				if (b.collisionChar != type)
 					continue;
 
-				if (b.EqualTo(tile, FlipStyle.Both))
+				if (b.EqualTo(tile, FlipStyle.None))
 					return b;
 			}
 			return null;
@@ -419,7 +421,6 @@ namespace Pixtro.Compiler {
 						else
 						{
 							mappedTile = fullTileset.GetBrick(new LargeTile(Settings.BrickTileSize * 8), currentTile);
-							tile = new LargeTile(Settings.BrickTileSize * 8);
 						}
 
 						if (mappedTile == null) {
@@ -427,8 +428,6 @@ namespace Pixtro.Compiler {
 						}
 						else {
 							retval = (ushort)(fullTileset.GetIndex(mappedTile, currentTile) + 1);
-							ushort offset = (ushort)(tile.GetFlipOffset(mappedTile) << 10);
-							retval |= offset;
 							retval |= (ushort)(mappedTile.palette << 12);
 						}
 					}
@@ -441,7 +440,6 @@ namespace Pixtro.Compiler {
 				}
 			}
 
-			count = 0;
 			return LZUtil.Compress(retvalArray);
 		}
 		private IEnumerable<byte> Entities() {
