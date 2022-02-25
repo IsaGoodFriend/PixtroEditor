@@ -131,7 +131,14 @@ namespace Pixtro.Compiler {
 		public static int RNGSeed;
 		public static int RandomFromPoint(Point point, int min, int max)
 		{
-			return Randomizer.Next(min, max);
+			return RandomFromPoint(point, RNGSeed, min, max);
+		}
+		public static int RandomFromPoint(Point point, int seed, int min, int max) {
+			int h = seed + point.X*374761393 + point.Y*668265263; //all constants are prime
+			h = (h^(h >> 13))*1274126177;
+			h = h^(h >> 16);
+			return h  % (max - min) - min;
+
 		}
 
 		public static Random Randomizer;

@@ -540,10 +540,11 @@ void move_cam()
 			{
 				position = VIS_BLOCK_POS(startX, min);
 
-				foreground[position] = TILE_INFO[tileset_data[startX + (min * lvl_width)] & 0xFFF] | (tileset_data[startX + (min * lvl_width)] & 0xF000);
+				short *ptr = &tileset_data[startX + (min * lvl_width)];
 
-				// if (midground)
-				// 	midground[position] = tileset_data[startX + (min * lvl_width) + 0x2000];
+				foreground[position] = TILE_INFO[*ptr & 0xFFF] | (*ptr & 0xF000);
+				if (midground)
+					midground[position] = TILE_INFO[ptr[0x2000] & 0xFFF] | (ptr[0x2000] & 0xF000);
 				// if (background)
 				// 	background[position] = tileset_data[startX + (min * lvl_width) + 0x4000];
 			}
@@ -560,10 +561,11 @@ void move_cam()
 			{
 				position = VIS_BLOCK_POS(min, startY);
 
-				foreground[position] = TILE_INFO[tileset_data[min + (startY * lvl_width)] & 0xFFF] | (tileset_data[min + (startY * lvl_width)] & 0xF000);
+				short *ptr = &tileset_data[min + (startY * lvl_width)];
 
-				// if (midground)
-				// 	midground[position] = tileset_data[min + (startY * lvl_width) + 0x2000];
+				foreground[position] = TILE_INFO[*ptr & 0xFFF] | (*ptr & 0xF000);
+				if (midground)
+					midground[position] = TILE_INFO[ptr[0x2000] & 0xFFF] | (ptr[0x2000] & 0xF000);
 				// if (background)
 				// 	background[position] = tileset_data[min + (startY * lvl_width) + 0x4000];
 			}
@@ -617,10 +619,11 @@ void reset_cam()
 
 		for (; idx > 0; idx--)
 		{
-			foreground[p1 + idx] = TILE_INFO[tileset_data[p2 + idx] & 0xFFF] | (tileset_data[p2 + idx] & 0xF000);
+			short *ptr = &tileset_data[p2 + idx];
+			foreground[p1 + idx] = TILE_INFO[*ptr & 0xFFF] | (*ptr & 0xF000);
 
-			// if (midground)
-			// 	midground[p1 + idx] = tileset_data[p2 + 0x2000 + idx];
+			if (midground)
+				midground[p1 + idx] = TILE_INFO[ptr[0x2000] & 0xFFF] | (ptr[0x2000] & 0xF000);
 			// if (background)
 			// 	background[p1 + idx] = tileset_data[p2 + 0x4000 + idx];
 		}
@@ -630,7 +633,11 @@ void reset_cam()
 
 		for (idx = x; idx > 0; idx--)
 		{
-			foreground[p1 + idx] = TILE_INFO[tileset_data[p2 + idx] & 0xFFF] | (tileset_data[p2 + idx] & 0xF000);
+			short *ptr = &tileset_data[p2 + idx];
+			foreground[p1 + idx] = TILE_INFO[*ptr & 0xFFF] | (*ptr & 0xF000);
+
+			if (midground)
+				midground[p1 + idx] = TILE_INFO[ptr[0x2000] & 0xFFF] | (ptr[0x2000] & 0xF000);
 
 			// if (midground)
 			// 	midground[p1 + idx] = tileset_data[p2 + 0x2000 + idx];
