@@ -49,38 +49,6 @@ extern Entity entities[ENTITY_LIMIT];
 extern void (*entity_update[32])(unsigned int index);
 extern void (*entity_render[32])(unsigned int index);
 
-// ---- LAYERS ----
-// Layer struct
-typedef struct Layer
-{
-	int pos[8];	 // The offsets of the lerp, excluding camera
-	int lerp[8]; // combines both x and y, ranging from 0 - 0x100.
-
-	unsigned int meta;
-	unsigned int tile_meta; // the size and offset of the tiles used.  8 bits for offset, 8 bits for size
-	unsigned int *tile_ptr;
-	unsigned short *map_ptr;
-
-} Layer;
-
-extern int layer_count, layer_line[7], layer_index;
-extern int bg_tile_allowance;
-
-extern Layer layers[4];
-extern int foreground_count;
-
-// Macro to help load backgrounds easier.
-#define LOAD_BG(bg, n) load_background(n, BGT_##bg, BGT_##bg##_len, BG_##bg, BG_##bg##_size)
-
-#define FG_TILESET 0
-#define BG_TILESET 1
-
-void set_layer_visible(int layer, bool vis);
-void set_layer_priority(int layer, int prio);
-void set_foreground_count(int count);
-void load_background(int index, unsigned int *tiles, unsigned int tile_len, unsigned short *mapping, int size);
-void finalize_layers();
-
 // ---- ENGINE ----
 //
 extern unsigned int game_life, levelpack_life, level_life;
@@ -131,7 +99,6 @@ void pixtro_update();
 void pixtro_render();
 
 // ---- Levels ----
-
 void load_level_pack(unsigned int *level_pack, int section);
 void load_level_pack_async(unsigned int *level_pack, int section);
 void move_to_level(int level, int section);
