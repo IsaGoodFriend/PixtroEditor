@@ -71,6 +71,8 @@ namespace Pixtro.Compiler
 			return file;
 		}
 
+		public static string[] CompilerErrorInfo = new string[5];
+
 		private const string
 			ArtPath = "art",
 			LevelPath = "levels",
@@ -142,6 +144,8 @@ namespace Pixtro.Compiler
 
 				string localPath = GetLocalPath(file, ArtPath);
 				string name = GetCompileName(file, ArtPath);
+
+				CompilerErrorInfo[0] = localPath;
 
 				try
 				{

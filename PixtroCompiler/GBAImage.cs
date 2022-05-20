@@ -380,8 +380,8 @@ namespace Pixtro.Compiler {
 					}
 					if (paletteIndex == palettes.Count)
 					{
-						if (palettesLocked)
-							throw new Exception("The images palettes have already been chosen, but no palette given is suitable to import the image.  Make sure the color are exact.");
+						if (palettesLocked) // TODO: allow compiler to find closest palette instead of throwing error?
+							throw new Exception($"Error compiling image {FullCompiler.CompilerErrorInfo[0]}. The image's palettes have already been chosen, but no palette given is suitable to import the image.  Make sure the color are exact.");
 
 						paletteIndex = 0;
 
