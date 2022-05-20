@@ -59,7 +59,12 @@ namespace Pixtro.Editor {
 			EmulationHandler.Update();
 
 			if (MInput.Keyboard.Check(Keys.LeftControl) && MInput.Keyboard.Pressed(Keys.B)) {
-				Projects.ProjectInfo.BuildAndRun();
+				if (MInput.Keyboard.Check(Keys.LeftShift)) {
+					Projects.ProjectInfo.BuildRelease();
+				}
+				else {
+					Projects.ProjectInfo.BuildAndRun();
+				}
 			}
 		}
 		protected override void RenderCore() {

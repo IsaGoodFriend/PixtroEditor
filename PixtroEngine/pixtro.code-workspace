@@ -25,7 +25,8 @@
 			"xutility": "c",
 			"tonc_vscode.h": "c",
 			"math.h": "c",
-			"load_data.h": "c"
+			"load_data.h": "c",
+			"core.h": "c"
 		}
 	}
 }

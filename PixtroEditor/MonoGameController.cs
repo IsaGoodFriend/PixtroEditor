@@ -9,6 +9,18 @@ namespace Pixtro.Editor {
 	public class MonoGameController : IController {
 		public ControllerDefinition Definition => null;
 
+		VirtualButton A = new VirtualButton(new VirtualButton.KeyboardKey(Keys.NumPad5), new VirtualButton.PadButton(0, Buttons.A)),
+			B= new VirtualButton(new VirtualButton.KeyboardKey(Keys.NumPad4), new VirtualButton.PadButton(0, Buttons.X)),
+			L= new VirtualButton(new VirtualButton.KeyboardKey(Keys.LeftShift), new VirtualButton.PadButton(0, Buttons.LeftShoulder)),
+			R= new VirtualButton(new VirtualButton.KeyboardKey(Keys.NumPad6), new VirtualButton.PadButton(0, Buttons.RightShoulder)),
+			Up= new VirtualButton(new VirtualButton.KeyboardKey(Keys.W), new VirtualButton.PadButton(0, Buttons.DPadUp)),
+			Down= new VirtualButton(new VirtualButton.KeyboardKey(Keys.S), new VirtualButton.PadButton(0, Buttons.DPadDown)),
+			Right= new VirtualButton(new VirtualButton.KeyboardKey(Keys.D), new VirtualButton.PadButton(0, Buttons.DPadRight)),
+			Left= new VirtualButton(new VirtualButton.KeyboardKey(Keys.A), new VirtualButton.PadButton(0, Buttons.DPadLeft)),
+			Start= new VirtualButton(new VirtualButton.KeyboardKey(Keys.NumPad9), new VirtualButton.PadButton(0, Buttons.Start)),
+			Select= new VirtualButton(new VirtualButton.KeyboardKey(Keys.NumPad8), new VirtualButton.PadButton(0, Buttons.Back));
+
+
 		public int AxisValue(string name) {
 			return 0;
 		}
@@ -23,25 +35,25 @@ namespace Pixtro.Editor {
 				default:
 					return false;
 				case "A":
-					return MInput.Keyboard.Check(Keys.NumPad5);
+					return A.Check;
 				case "B":
-					return MInput.Keyboard.Check(Keys.NumPad4);
+					return B.Check;
 				case "Left":
-					return MInput.Keyboard.Check(Keys.A);
+					return Left.Check;
 				case "Right":
-					return MInput.Keyboard.Check(Keys.D);
+					return Right.Check;
 				case "Up":
-					return MInput.Keyboard.Check(Keys.W);
+					return Up.Check;
 				case "Down":
-					return MInput.Keyboard.Check(Keys.S);
+					return Down.Check;
 				case "Start":
-					return MInput.Keyboard.Check(Keys.NumPad8);
+					return Start.Check;
 				case "Select":
-					return MInput.Keyboard.Check(Keys.NumPad9);
+					return Select.Check;
 				case "L":
-					return MInput.Keyboard.Check(Keys.LeftShift);
+					return L.Check;
 				case "R":
-					return MInput.Keyboard.Check(Keys.NumPad6);
+					return R.Check;
 
 			}
 		}

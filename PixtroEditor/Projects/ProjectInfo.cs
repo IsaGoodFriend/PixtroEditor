@@ -35,9 +35,10 @@ namespace Pixtro.Projects {
 			Compiler.MainProgram.WarningOutput += Scenes.ConsoleScene.CompilerWarning;
 			Compiler.MainProgram.ErrorOutput += Scenes.ConsoleScene.CompilerError;
 
-			if (CurrentProject.BuiltRelease != release) {
+			if (CurrentProject.justLoaded || CurrentProject.BuiltRelease != release) {
 				CurrentProject.CleanProject();
 				CurrentProject.BuiltRelease = release;
+				CurrentProject.justLoaded = false;
 			}
 
 			buildThread = new Thread(BuildThread);
@@ -52,6 +53,10 @@ namespace Pixtro.Projects {
 					Engine.OverloadGameLoop = null;
 				};
 			};
+		}
+
+		public static void BuildRelease() {
+			BuildProject(true);
 		}
 
 		private static Version CurrentFormatVersion = new Version(1, 0, 0);
@@ -103,7 +108,8 @@ namespace Pixtro.Projects {
 		private Version formatVersion;
 		private BinaryFileWriter nodes;
 
-		public bool BuiltRelease = false;
+		public bool BuiltRelease;
+		private bool justLoaded = true;
 
 		private bool dirty;
 		public bool Dirty {
