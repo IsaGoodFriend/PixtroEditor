@@ -1,4 +1,4 @@
-﻿
+﻿using System.Threading.Tasks;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -11,6 +11,7 @@ namespace Pixtro.Compiler {
     internal static class Settings {
         public static bool Clean { get; set; }
         public static bool Debug { get; set; }
+        public static bool DebugEngine { get; set; }
         public static bool OptimizedCode { get; set; }
 
         public static string ProjectPath { get; set; }
@@ -22,6 +23,9 @@ namespace Pixtro.Compiler {
 
         public static void SetInitialArguments(string[] args) {
             Debug = false;
+#if DEBUG
+            DebugEngine = true;
+#endif
             BrickTileSize = 1;
             Clean = false;
             OptimizedCode = true;
@@ -158,7 +162,7 @@ namespace Pixtro.Compiler {
             Settings.GamePath =
                 Settings.Debug ?
                     Path.Combine(Settings.EnginePath, "output") :
-                    Path.Combine(Settings.ProjectPath, Path.GetDirectoryName(projectPath));
+                    Path.Combine(Settings.ProjectPath, "release");
 
             Error = false;
 
@@ -220,10 +224,10 @@ namespace Pixtro.Compiler {
             ProcessStartInfo info = new ProcessStartInfo();
             info.FileName = "cmd.exe";
 
-            // TODO: Figure out why the f*** the compiler fails when the window is hidden
-			//info.CreateNoWindow = true;
             info.RedirectStandardInput = true;
             info.RedirectStandardError = true;
+            info.RedirectStandardOutput = true;
+            info.CreateNoWindow = info.RedirectStandardOutput && info.RedirectStandardOutput;
             info.UseShellExecute = false;
 
             cmd.StartInfo = info;
@@ -238,126 +242,153 @@ namespace Pixtro.Compiler {
                 sw.WriteLine($"make -C {Settings.ProjectPath} -f {Settings.EnginePath}/Makefile {(Settings.Clean ? "clean" : "")}");
             }
 
-            if (info.RedirectStandardError) {
+            StreamWriter errorLog = new StreamWriter(File.Open("compileError.log", FileMode.Create));
+            StreamWriter outputLog = new StreamWriter(File.Open("compileOutput.log", FileMode.Create));
+            StreamReader errorReader = info.RedirectStandardError ? cmd.StandardError : null;
+            StreamReader outputReader = info.RedirectStandardOutput ? cmd.StandardOutput : null;
 
-                using (StreamWriter sw = new StreamWriter(File.Open("error.log", FileMode.Create))) {
+            string projectSource = Path.Combine(Settings.ProjectPath, "source/").Replace('\\', '/'),
+                engineSource = Path.Combine(Settings.EnginePath, "src/").Replace('\\', '/');
 
-                    using (StreamReader er = cmd.StandardError) {
+            void errorTask() {
+                const string errorParseRegex = @"^(?:In file included from )?(\w:[\\\/\w\.]+\/(\w+\.(?:c|h))):(?:([0-9]+):)?(?:([0-9]+):)?(?: +(warning|note|error): (?:([\w\.\t '""\-()\[\]<>;?#*]+?)(?:\[([-\w]+)\])?))?$";
 
-                        string read() {
-                            string line = er.ReadLine();
-                            sw.WriteLine(line);
-                            sw.Flush();
-                            return line;
-                        }
+                const int 
+                    fullPath     = 1,
+                    fileName     = 2,
+                    fileLine     = 3,
+                    fileChar     = 4,
+                    errorType    = 5,
+                    fullMessage  = 6,
+                    shortMessage = 7,
+                    a = 10;
 
-                        string projectSource = Path.Combine(Settings.ProjectPath, "source/").Replace('\\', '/'),
-                            engineSource = Path.Combine(Settings.EnginePath, "src/").Replace('\\', '/');
+                string read() {
+                    string line;
+                    line = errorReader.ReadLine();
 
-                        while (!er.EndOfStream) {
-                            string log = read();
-                            string file, type, message;
-                            int line;
+                    errorLog.WriteLine(line);
+                    errorLog.Flush();
+                    return line;
+                }
 
-                            string[] split;
 
-                            if (log.Contains("/arm-none-eabi/bin/ld.exe:")) {
-                                file = "";
-                                type = "";
-                                message = "";
-                                line = 0;
-                                log = log.Split("ld.exe:")[1].Trim();
+                while (!errorReader.EndOfStream) {
 
-                                while (!log.StartsWith(projectSource) && !log.StartsWith(engineSource)) {
-                                    log = read();
-                                }
+                    Match mainMatch = Regex.Match(read(), errorParseRegex),
+                        finalMatch = mainMatch;
 
-                                log = log.Replace(projectSource, "").Replace(engineSource, "");
-                                split = log.Split(':');
-                                file = split[0].Trim();
-                                line = int.Parse(split[1]);
 
-                                type = "error";
-                                message = split[2].Trim();
+                    try {
+                        if (mainMatch.Success) {
+                            while (!finalMatch.Groups[errorType].Success) {
+                                finalMatch = Regex.Match(read(), errorParseRegex);
                             }
-                            else if (log.StartsWith("In file included from ")) {
-                                log = log.Replace("In file included from ", "");
-                                if (!log.StartsWith(projectSource)) {
-                                    continue;
-                                }
 
-                                log = log.Replace(projectSource, "");
-                                split = log.Split(':');
-                                file = split[0].Trim();
-                                line = int.Parse(split[1]);
-
-                                log = read();
-                                log = log.Replace(projectSource, "").Replace(engineSource, "");
-
-                                split = log.Split(':');
-                                type = split[3].Trim();
-                                message = split[4].Trim();
-                            }
-#if DEBUG
-                            else if (log.StartsWith(projectSource) || log.StartsWith(engineSource)) {
-#else
-                            else if (log.StartsWith(projectSource)) {
-#endif
-
-                                do {
-#if DEBUG
-                                    log = log.Replace(projectSource, "").Replace(engineSource, "");
-#else
-                                    log = log.Replace(projectSource, "");
-#endif
-                                    split = log.Split(':');
-
-                                    log = read();
-                                } while (split.Length < 5);
-
-                                file = split[0];
-
-                                file = split[0].Trim();
-                                line = int.Parse(split[1]);
-
-                                type = split[3].Trim();
-                                message = split[4].Trim();
-                            }
-                            else
+                            if ((finalMatch.Groups[1].Value.StartsWith(engineSource) ||
+                                mainMatch.Groups[1].Value.StartsWith(engineSource)) && !Settings.DebugEngine) {
                                 continue;
-
-                            string switchCase = Regex.IsMatch(message, @"\[([\w-])+\]$") ? Regex.Match(message, @"\[([\w-]+)\]$").Groups[1].Value : message;
-
-                            if (type == "warning") {
-
-                                switch (switchCase) {
-                                    case "backslash-newline at end of file":
-                                    case "-Wdiscarded-qualifiers":
-                                    case "incompatible implicit declaration of built-in function 'memset'":
-                                    case "incompatible implicit declaration of built-in function 'memcpy'":
-                                        break;
-                                    default:
-                                        WarningOutput(file, line, message);
-                                        break;
-                                }
                             }
-                            else if (type == "error") {
-                                switch (switchCase) {
-                                    default:
-                                        ErrorOutput(file, line, message);
-                                        break;
-                                }
+
+                            string file, type, message, simpleMessage;
+                            int line, character;
+
+                            if (mainMatch.Groups[errorType].Success) {
+                                file = mainMatch.Groups[fileName].Value;
                             }
                             else {
+                                file = $"{finalMatch.Groups[fileName].Value} ({mainMatch.Groups[fileName].Value})";
+                            }
+                            type = finalMatch.Groups[errorType].Value;
+                            line = int.Parse(finalMatch.Groups[fileLine].Value);
+                            character = finalMatch.Groups[fileChar].Success ? int.Parse(finalMatch.Groups[fileChar].Value) : 0;
+                            message = finalMatch.Groups[fullMessage].Value;
+                            simpleMessage = finalMatch.Groups[shortMessage].Success ? finalMatch.Groups[shortMessage].Value : null;
 
+
+                            string switchCase;
+                            if (simpleMessage != null)
+                                switchCase = simpleMessage;
+							else {
+                                switchCase = message;
+                                switchCase = Regex.Replace(switchCase, @"'[\w\d_]+'", "'var'");
+							}
+
+                            switch (type) {
+                                case "warning":
+                                    switch (switchCase) {
+                                        case "backslash-newline at end of file":
+                                        case "-Wdiscarded-qualifiers":
+                                        case "-Wunknown-pragmas":
+                                        case "incompatible implicit declaration of built-in function 'var'":
+                                        //case "incompatible implicit declaration of built-in function 'memset'":
+                                        //case "incompatible implicit declaration of built-in function 'memcpy'":
+                                            break;
+#if DEBUG
+                                        case "-Wimplicit-function-declaration":
+                                        case "-Wincompatible-pointer-types":
+                                        case "-Wunused-variable":
+                                        case "-Wparentheses":
+                                        case "-Wint-conversion":
+
+                                        case "conflicting types for 'var'":
+                                            WarningOutput(file, line, message);
+                                            break;
+#endif
+                                        default:
+                                            WarningOutput(file, line, message);
+                                            break;
+                                    }
+                                    break;
+                                case "error":
+                                    ErrorOutput(file, line, message);
+                                    break;
+                                case "note":
+                                    break;
                             }
                         }
                     }
+					catch {
+                        // Whoops
+					}
+                }
+
+                // old code
+				{
+//                    
+                }
+            }
+            void outputTask() {
+
+                string read() {
+                    string line;
+
+                    line = outputReader.ReadLine();
+
+                    outputLog.WriteLine(line);
+                    outputLog.Flush();
+                    return line;
+                }
+
+                while (!outputReader.EndOfStream) {
+                    string log = read();
                 }
             }
 
-            cmd.WaitForExit();
+            Task readErrors = info.RedirectStandardError ? new Task(errorTask) : null;
+            Task readOutput = info.RedirectStandardOutput ? new Task(outputTask) : null;
 
+            readErrors?.Start();
+            readOutput?.Start();
+
+            readErrors?.Wait();
+            readOutput?.Wait();
+
+            errorLog.Dispose();
+            outputLog.Dispose();
+            errorReader?.Dispose();
+            outputReader?.Dispose();
+            
             return ReturnValue();
         }
 
