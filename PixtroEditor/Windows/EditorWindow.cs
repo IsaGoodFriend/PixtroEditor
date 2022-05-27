@@ -58,6 +58,14 @@ namespace Pixtro.Editor {
 
 			EmulationHandler.Update();
 
+			//if (!EmulationHandler.GameRunning) {
+			//	string test = Directory.GetCurrentDirectory() + "/test.gba";
+			//	EmulationHandler.LoadGame(test);
+			//}
+			if (!EmulationHandler.GameRunning && !Projects.ProjectInfo.Building) {
+				//Projects.ProjectInfo.BuildAndRun();
+			}
+
 			if (MInput.Keyboard.Check(Keys.LeftControl) && MInput.Keyboard.Pressed(Keys.B)) {
 				if (MInput.Keyboard.Check(Keys.LeftShift)) {
 					Projects.ProjectInfo.BuildRelease();

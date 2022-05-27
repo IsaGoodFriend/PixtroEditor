@@ -24,7 +24,7 @@ include $(DEVKITARM)/gba_rules
 ENGINE		:= {0}
 TARGET		:= {1}
 BUILD		:= build
-SOURCES		:= source build/source
+SOURCES		:= source build/source $(ENGINE)/src
 INCLUDES	:= include source build/source
 DATA		:=
 MUSIC		:= audio
@@ -72,8 +72,6 @@ export VPATH	:= \
 			$(foreach dir,$(GRAPHICS),$(CURDIR)/$(dir)) \
 			$(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 			
-SOURCES += $(ENGINE)/src
-
 export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
@@ -109,9 +107,9 @@ export OFILES := $(OFILES_BIN) $(OFILES_SOURCES)
 export HFILES := $(addsuffix .h,$(subst .,_,$(BINFILES)))
 
 export INCLUDE	:=	\
-					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 					-I$(CURDIR)/$(BUILD) \
 					-I$(ENGINE)/src \
+					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 					$(foreach dir,$(INCLUDES),-iquote $(CURDIR)/$(dir))
 
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)

@@ -157,14 +157,16 @@ void pixtro_render() {
 	// Update and render particles
 	update_particles();
 
-	// Render each visible entity
-	for (i = 0; i < max_entities; ++i) {
-		if (!ENT_FLAG(VISIBLE, i) || !ENT_FLAG(LOADED, i) || !entity_render[ENT_TYPE(i)])
-			continue;
+	if (fade_timer != 5) {
+		// Render each visible entity
+		for (i = 0; i < max_entities; ++i) {
+			if (!ENT_FLAG(VISIBLE, i) || !ENT_FLAG(LOADED, i) || !entity_render[ENT_TYPE(i)])
+				continue;
 
-		SET_DRAWING_FLAG(CAM_FOLLOW);
+			SET_DRAWING_FLAG(CAM_FOLLOW);
 
-		entity_render[ENT_TYPE(i)](i);
+			entity_render[ENT_TYPE(i)](i);
+		}
 	}
 
 	// Custom render if desired
@@ -187,6 +189,8 @@ void routine_on_fade(void (*function)(Routine*)) {
 void start_fading() {
 	if (fade_timer)
 		return;
+
+	reset_routine(onfade_routine);
 	fade_timer = 1;
 }
 

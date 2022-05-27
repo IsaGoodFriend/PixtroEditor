@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -31,10 +32,14 @@ namespace Pixtro.Emulation
 			SRam_Address = 0xE;
 		private const bool BigEndian = false;
 
-		public sealed class RomMapping
+		public sealed class RomMapping : Range<long>
 		{
 			public int Address { get; private set; }
 			public int Size { get; private set; }
+
+			public long Start => Address;
+
+			public long EndInclusive => Address + Size - 1;
 
 			public RomMapping(int addr, int size)
 			{
@@ -294,7 +299,9 @@ namespace Pixtro.Emulation
 
 		#endregion
 
-		private Dictionary<string, RomMapping> romMap = new Dictionary<string, RomMapping>();
+		private Dictionary<string, RomMapping> 
+			romMap = new Dictionary<string, RomMapping>(),
+			iwramMap = new Dictionary<string, RomMapping>();
 
 		public GameCommunicator(StreamReader memoryMap)
 		{
@@ -302,69 +309,122 @@ namespace Pixtro.Emulation
 
 			while (!memoryMap.ReadLine().StartsWith("Allocating common symbols")) ;
 
-			string currentLine = memoryMap.ReadLine().Trim();
+			string currentLine = memoryMap.ReadLine();
 
 			List<MemoryMap> mapList = new List<MemoryMap>();
 
 			do
 			{
 
-				while (!currentLine.StartsWith(".bss.completed") && !currentLine.StartsWith("*(.rodata)")) {
-					currentLine = memoryMap.ReadLine().Trim();
-
-					if (memoryMap.EndOfStream)
-						break;
-				}
-
-				if (memoryMap.EndOfStream)
-					break;
-
-				do {
-					currentLine = memoryMap.ReadLine().Trim();
-
-					string[] split = currentLine.Split(new char[]{ ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-					if (split.Length == 1 || split[1].StartsWith("0x"))
-						continue;
-
-					int domain = int.Parse(split[0].Substring(11, 1));
-					int parsed = Convert.ToInt32(split[0].Substring(12, 6), 16);
-
-					switch (split[0][11]) {
-						case '8':
-							string name = split[1];
-
-							try {
-								int otherAddr = Convert.ToInt32(currentLine.Substring(12, 6), 16);
-
-								romMap.Add(name, new RomMapping(parsed, otherAddr - parsed));
-							}
-							catch { }
-							continue;
-					}
+				void addIWRam(Match line, int start, int length) {
+					RomMapping map = new RomMapping(start, length);
+					iwramMap.Add(line.Groups[2].Value, map);
 
 
-					var propertyInfo = GetType().GetProperty(split[1], BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+					var propertyInfo = GetType().GetProperty(line.Groups[2].Value, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
 					if (propertyInfo != null && propertyInfo.CustomAttributes.Where((item) => item.AttributeType == typeof(DontHotloadAttribute)).Count() != 0) {
 						propertyInfo = null;
 					}
 
 					if (propertyInfo != null) {
-						split = currentLine.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
-						int otherAddr = Convert.ToInt32(split[0].Substring(12, 6), 16);
-
-						var mapped = new MemoryMap(domain, parsed, otherAddr - parsed);
+						var mapped = new MemoryMap(3, start, length);
 
 						mapList.Add(mapped);
 
 						propertyInfo.GetSetMethod(true).Invoke(this, new object[] { mapped });
 
 					}
-
 				}
-				while (!currentLine.StartsWith("*") || currentLine.StartsWith("*fill*"));
+
+				const string regexA = @" {16}0x0{9}[38]((?!000000)[0-9a-fA-F]{6}) {16}([\w]+)";
+				const string romRegex = @" \.text {10}0x0{9}(8[\w]{6}) +0x([\w]+) ([\w\.]+)\.o";
+				const string ramRegex = @" \.bss {11}0x0{9}(3[\w]{6}) +0x([\w]+) ([\w\.]+)\.o";
+
+				Match mainMatch;
+
+				if ((mainMatch = Regex.Match(currentLine, romRegex)).Success) {
+					int size = Convert.ToInt32(mainMatch.Groups[2].Value, 16), index, localSize;
+
+					Match match, prevMatch = null;
+					while ((match = Regex.Match(currentLine = memoryMap.ReadLine(), regexA)).Success) {
+						if (prevMatch != null) {
+							index = Convert.ToInt32(prevMatch.Groups[1].Value, 16);
+							localSize = Convert.ToInt32(match.Groups[1].Value, 16) - index;
+
+							size -= localSize;
+
+							romMap.Add(prevMatch.Groups[2].Value, new RomMapping(index, localSize));
+						}
+						prevMatch = match;
+					}
+
+					index = Convert.ToInt32(prevMatch.Groups[1].Value, 16);
+
+					romMap.Add(prevMatch.Groups[2].Value, new RomMapping(index, size));
+				}
+				else if ((mainMatch = Regex.Match(currentLine, ramRegex)).Success) {
+					int size = Convert.ToInt32(mainMatch.Groups[2].Value, 16);
+
+					Match match, prevMatch = null;
+					while ((match = Regex.Match(currentLine = memoryMap.ReadLine(), regexA)).Success) {
+						if (prevMatch != null) {
+							int index = Convert.ToInt32(prevMatch.Groups[1].Value, 16);
+							int localSize = Convert.ToInt32(match.Groups[1].Value, 16) - index;
+
+							size -= localSize;
+							addIWRam(prevMatch, index, localSize);
+						}
+						prevMatch = match;
+					}
+
+					addIWRam(prevMatch, Convert.ToInt32(prevMatch.Groups[1].Value, 16), size);
+				}
+				else {
+
+					currentLine = memoryMap.ReadLine();
+				}
+
+				//while (!currentLine.StartsWith(".bss.completed") && !currentLine.StartsWith("*(.rodata)")) {
+				//	currentLine = memoryMap.ReadLine().Trim();
+
+				//	if (memoryMap.EndOfStream)
+				//		break;
+				//}
+
+				//if (memoryMap.EndOfStream)
+				//	break;
+
+				//do {
+				//	currentLine = memoryMap.ReadLine().Trim();
+
+				//	string[] split = currentLine.Split(new char[]{ ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+				//	if (split.Length == 1 || split[1].StartsWith("0x"))
+				//		continue;
+
+				//	int domain = int.Parse(split[0].Substring(11, 1));
+				//	int parsed = Convert.ToInt32(split[0].Substring(12, 6), 16);
+
+				//	switch (split[0][11]) {
+				//		case '8':
+				//			string name = split[1];
+
+				//			try {
+				//				int otherAddr = Convert.ToInt32(currentLine.Substring(12, 6), 16);
+
+				//				romMap.Add(name, new RomMapping(parsed, otherAddr - parsed));
+				//			}
+				//			catch { }
+				//			continue;
+				//	}
+
+
+
+				//}
+				//while (!currentLine.StartsWith("*") || currentLine.StartsWith("*fill*"));
 
 			} while (!memoryMap.EndOfStream);
+
 
 			mapList.Add(LevelRegion = new MemoryMap(EWRam_Address, 0x20000, 0x10000));
 			mapList.Add(Palettes = new MemoryMap(PalRam_Address, 0, 0x400));
@@ -426,6 +486,27 @@ namespace Pixtro.Emulation
 		public MemoryMap GetSpritePalette(int palette)
 		{
 			return CreateMemoryMap(5, (uint)(palette * 32) + 256, 32);
+		}
+
+		public byte[] GetFromRam(string varName) {
+			if (!iwramMap.ContainsKey(varName))
+				return new byte[0];
+
+			var map = iwramMap[varName];
+
+			byte[] data = new byte[map.Size];
+
+			IWRam.BulkPeekByte(map, data);
+
+			return data;
+		}
+		public int GetIntFromRam(string varName, int offset = 0) {
+			if (!iwramMap.ContainsKey(varName))
+				return 0;
+
+			var map = iwramMap[varName];
+
+			return (int)IWRam.PeekUint(map.Address + (offset << 2), BigEndian);
 		}
 
 		public void RomLoaded()

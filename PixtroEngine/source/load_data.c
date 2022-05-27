@@ -61,9 +61,6 @@ extern int foreground_count;
 
 extern Routine loading_routine;
 
-void set_loading_region(char region_b) {
-	level_ram = region_b ? LEVEL_REGION_B : LEVEL_REGION_A;
-}
 void set_entities_location() {
 	int val = level_ram;
 	val		= (val + 3) & ~0x3;

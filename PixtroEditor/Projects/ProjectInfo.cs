@@ -99,6 +99,7 @@ namespace Pixtro.Projects {
 			BuildSuccess = success;
 			if (success && OnSuccessfulBuild != null) {
 				OnSuccessfulBuild();
+				OnSuccessfulBuild = null;
 			}
 		}
 

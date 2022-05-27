@@ -2,13 +2,10 @@
 using System.Runtime.InteropServices;
 using Pixtro.Emulation;
 
-namespace Pixtro.Emulation.GBA
-{
-	public abstract class LibmGBA
-	{
+namespace Pixtro.Emulation.GBA {
+	public abstract class LibmGBA {
 		[Flags]
-		public enum Buttons : int
-		{
+		public enum Buttons : int {
 			A = 1,
 			B = 2,
 			Select = 4,
@@ -21,13 +18,10 @@ namespace Pixtro.Emulation.GBA
 			L = 512
 		}
 
-		public static Buttons GetButtons(IController c)
-		{
+		public static Buttons GetButtons(IController c) {
 			Buttons ret = 0;
-			foreach (string s in Enum.GetNames(typeof(Buttons)))
-			{
-				if (c.IsPressed(s))
-				{
+			foreach (string s in Enum.GetNames(typeof(Buttons))) {
+				if (c.IsPressed(s)) {
 					ret |= (Buttons)Enum.Parse(typeof(Buttons), s);
 				}
 			}
@@ -36,8 +30,7 @@ namespace Pixtro.Emulation.GBA
 
 		private const CallingConvention cc = CallingConvention.Cdecl;
 
-		public enum SaveType : int
-		{
+		public enum SaveType : int {
 			Autodetect = -1,
 			ForceNone = 0,
 			Sram = 1,
@@ -47,22 +40,27 @@ namespace Pixtro.Emulation.GBA
 		}
 
 		[Flags]
-		public enum Hardware : int
-		{
+		public enum Hardware : int {
 			None = 0,
 			Rtc = 1,
 			Rumble = 2,
 			LightSensor = 4,
 			Gyro = 8,
 			Tilt = 16,
-			GbPlayer = 32,
+			GbPlayer = 32, // we're not dolphin, so let's ignore this
 			GbPlayerDetect = 64,
-			NoOverride = 0x8000 // can probably ignore this
+			// heuristics since core only has a builtin autodetect for ALL hardware
+			// probably will be annoying to update as core adds in more hardware...
+			AutodetectRtc = 128,
+			AutodetectRumble = 256,
+			AutodetectLightSensor = 512,
+			AutodetectGyro = 1024,
+			AutodetectTilt = 2048,
+			// no autodetection for GbPlayerDetect....
 		}
 
 		[Flags]
-		public enum Layers : int
-		{
+		public enum Layers : int {
 			BG0 = 1,
 			BG1 = 2,
 			BG2 = 4,
@@ -71,8 +69,7 @@ namespace Pixtro.Emulation.GBA
 		}
 
 		[Flags]
-		public enum Sounds : int
-		{
+		public enum Sounds : int {
 			CH0 = 1,
 			CH1 = 2,
 			CH2 = 4,
@@ -81,8 +78,7 @@ namespace Pixtro.Emulation.GBA
 			CHB = 32
 		}
 
-		public enum mWatchpointType
-		{
+		public enum mWatchpointType {
 			WATCHPOINT_WRITE = 1,
 			WATCHPOINT_READ = 2,
 			WATCHPOINT_RW = 3,
@@ -90,8 +86,7 @@ namespace Pixtro.Emulation.GBA
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public class OverrideInfo
-		{
+		public class OverrideInfo {
 			public SaveType Savetype;
 			public Hardware Hardware;
 			public uint IdleLoop = IDLE_LOOP_NONE;
@@ -99,8 +94,7 @@ namespace Pixtro.Emulation.GBA
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public class MemoryAreas
-		{
+		public class MemoryAreas {
 			public IntPtr bios;
 			public IntPtr wram;
 			public IntPtr iwram;
@@ -116,7 +110,7 @@ namespace Pixtro.Emulation.GBA
 		public abstract void BizDestroy(IntPtr ctx);
 
 		[BizImport(cc, Compatibility = true)]
-		public abstract IntPtr BizCreate(byte[] bios, byte[] data, int length, [In]OverrideInfo dbinfo, bool skipBios);
+		public abstract IntPtr BizCreate(byte[] bios, byte[] data, int length, [In] OverrideInfo dbinfo, bool skipBios);
 
 		[BizImport(cc, Compatibility = true)]
 		public abstract void BizReset(IntPtr ctx);
@@ -129,7 +123,7 @@ namespace Pixtro.Emulation.GBA
 		public abstract void BizSetPalette(IntPtr ctx, int[] palette);
 
 		[BizImport(cc, Compatibility = true)]
-		public abstract void BizGetMemoryAreas(IntPtr ctx, [Out]MemoryAreas dst);
+		public abstract void BizGetMemoryAreas(IntPtr ctx, [Out] MemoryAreas dst);
 
 		[BizImport(cc, Compatibility = true)]
 		public abstract int BizGetSaveRam(IntPtr ctx, byte[] dest, int maxsize);

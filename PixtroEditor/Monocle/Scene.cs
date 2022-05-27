@@ -123,6 +123,7 @@ namespace Monocle {
 
 		public virtual void DrawGraphics() {
 
+			Entities.Render();
 		}
 
 		public virtual void HandleGraphicsReset() {

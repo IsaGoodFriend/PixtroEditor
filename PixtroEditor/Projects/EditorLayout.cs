@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Monocle;
+using Pixtro.Scenes;
 
 namespace Pixtro.Editor
 {
@@ -200,15 +201,15 @@ namespace Pixtro.Editor
 		public EditorLayout()
 		{
 			layout = new LayoutSplit();
-			(layout as LayoutSplit).Item1 = new LayoutWindow(typeof(Scenes.EmulatorScene));
-			(layout as LayoutSplit).Item2 = new LayoutWindow(typeof(Scenes.LevelEditorScene));
+			(layout as LayoutSplit).Item1 = new LayoutWindow(typeof(EmulatorScene));
+			(layout as LayoutSplit).Item2 = new LayoutWindow(typeof(MemoryPeakScene));
 
 			OnResize(1280, 720);
 
 			SplitAt(new Point(0, 500), SplitDirection.Vertical);
 
 			var window = GetWindow(0b10);
-			window.ChangeRootScene(new Scenes.ConsoleScene());
+			window.ChangeRootScene(new ConsoleScene());
 
 			Engine.OnMouseDown += MouseDown;
 			Engine.ResizeEnd += OnResize;

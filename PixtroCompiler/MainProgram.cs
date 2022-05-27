@@ -332,11 +332,11 @@ namespace Pixtro.Compiler {
                                         case "-Wint-conversion":
 
                                         case "conflicting types for 'var'":
-                                            WarningOutput(file, line, message);
+                                            //WarningOutput(file, line, message);
                                             break;
 #endif
                                         default:
-                                            WarningOutput(file, line, message);
+                                            //WarningOutput(file, line, message);
                                             break;
                                     }
                                     break;
@@ -372,6 +372,10 @@ namespace Pixtro.Compiler {
 
                 while (!outputReader.EndOfStream) {
                     string log = read();
+
+                    if (log == "ROM fixed!") {
+                        StandardOutput("Build Successful");
+					}
                 }
             }
 

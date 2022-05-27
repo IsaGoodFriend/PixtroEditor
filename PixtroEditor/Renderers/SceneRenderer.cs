@@ -7,13 +7,23 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Pixtro.Editor {
 	public class SceneRenderer : Renderer {
-		public BlendState Blending;
-		public SamplerState Sampling;
+		public static BlendState Blending = BlendState.AlphaBlend;
+		public static SamplerState Sampling = SamplerState.PointClamp;
 
 		public RenderTarget2D target { get; private set; }
 		public SceneRenderer(Scene scene) {
-			Blending = BlendState.AlphaBlend;
-			Sampling = SamplerState.PointClamp;
+		}
+
+		public static void BeginGraphics(Scene scene, Effect eff = null) {
+
+			//Render everything on a moving camera
+			Draw.SpriteBatch.GraphicsDevice.SetRenderTarget(null);
+			Draw.SpriteBatch.Begin(SpriteSortMode.FrontToBack, Blending, Sampling, DepthStencilState.DepthRead, RasterizerState.CullNone, eff, scene.Camera.Matrix * Matrix.CreateTranslation(0, 50, 0));
+
+		}
+		public static void EndGraphics() {
+
+			Draw.SpriteBatch.End();
 		}
 
 		public override void Render(Scene scene) {
@@ -25,13 +35,11 @@ namespace Pixtro.Editor {
 			viewport.Height -= EditorWindow.SUB_MENU_BAR;
 			Engine.Instance.GraphicsDevice.Viewport = viewport;
 
-			//Render everything on a moving camera
-			Draw.SpriteBatch.Begin(SpriteSortMode.FrontToBack, Blending, Sampling, DepthStencilState.DepthRead, RasterizerState.CullNone, null, scene.Camera.Matrix);
+			BeginGraphics(scene);
 
-			scene.Entities.Render();
 			scene.DrawGraphics();
 
-			Draw.SpriteBatch.End();
+			EndGraphics();
 
 
 			viewport.Y -= EditorWindow.SUB_MENU_BAR;
