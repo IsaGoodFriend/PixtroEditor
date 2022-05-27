@@ -16,11 +16,15 @@ namespace Pixtro.Emulation {
 
 		public static GameCommunicator Communication { get; private set; }
 
+		public static bool GameRunning => emulator != null;
+
 		const int size = 240 * 160;
 
 		public static bool Focused = false, PlayUnfocused = false;
 
 		private static bool softPause;
+
+		public static event Action OnScreenRedraw;
 
 		public static bool SoftPause {
 			get => softPause || (!Focused && !PlayUnfocused);
@@ -76,20 +80,9 @@ namespace Pixtro.Emulation {
 
 				buffer = emulator.GetVideoBuffer();
 
-				for (int i = 0; i < size; ++i) {
-					int val = buffer[i] & 0xFF00FF;
-					buffer[i] &= ~0xFF00FF;
-					buffer[i] |= (val & 0xFF) << 16;
-					buffer[i] |= (val & 0xFF0000) >> 16;
-				}
+				OnScreenRedraw();
 
-				if (MInput.Keyboard.Check(Microsoft.Xna.Framework.Input.Keys.Q)) {
-					LevelDataInGame(0, true);
-				}
 
-				if (Communication.debug_engine_flags.GetFlag(GameToEditorFlags.PrintLevelData)) {
-
-				}
 			}
 		}
 		public static int[] VideoBuffer() {

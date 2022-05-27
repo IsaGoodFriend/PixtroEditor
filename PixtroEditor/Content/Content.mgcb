@@ -44,3 +44,15 @@
 /processorParam:TextureFormat=Color
 /build:Graphics/test tileset.png
 
+#begin Shaders/gba_on.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/gba_on.fx
+
+#begin Shaders/main.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/main.fx
+
