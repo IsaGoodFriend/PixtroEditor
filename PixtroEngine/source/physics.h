@@ -1,11 +1,13 @@
 #pragma once
 
 #include "core.h"
+#include "tonc_vscode.h"
 
-#define SET_TILE_DATA(i, shape, coll) tile_types[i] = (shape) | (coll << 8)
+extern unsigned short* tile_types;
 
-extern unsigned int tile_types[256];
+extern int (*physics_code[255])(void);
+extern bool (*collide_code[255])(int, int, int, int);
 
-extern unsigned int entity_physics(Entity *ent, int hit_mask);
+extern unsigned int entity_physics(Entity* ent, int hit_mask);
 extern unsigned int collide_rect(int x, int y, int width, int height, int hit_mask);
 extern unsigned int collide_entity(unsigned int ID);

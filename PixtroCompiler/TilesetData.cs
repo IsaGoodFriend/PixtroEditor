@@ -17,6 +17,27 @@ namespace Pixtro.Compiler
 		bool EqualToFlipped(T other, FlipStyle flippable);
 		FlipStyle GetFlipDifference(T other);
 	}
+	internal class CompareBricks : CompareFlippable<Brick> {
+		public CompareBricks() {
+
+		}
+		public CompareBricks(FlipStyle style) {
+			flipStyle = style;
+		}
+
+		public override bool Equals(Brick x, Brick y) {
+			if (!base.Equals(x, y))
+				return false;
+			return
+				x.collisionChar == y.collisionChar &&
+				x.collisionShape == y.collisionShape &&
+				x.collisionType == y.collisionType;
+		}
+
+		public override int GetHashCode(Brick obj) {
+			return obj.GetHashCode();
+		}
+	}
 	internal class CompareFlippable<T> : IEqualityComparer<T> where T : IFlippable<T>
 	{
 		public CompareFlippable()
@@ -29,12 +50,12 @@ namespace Pixtro.Compiler
 		}
 		public FlipStyle flipStyle = FlipStyle.Both;
 
-		public bool Equals(T x, T y)
+		public virtual bool Equals(T x, T y)
 		{
 			return x.EqualTo(y, flipStyle);
 		}
 
-		public int GetHashCode(T obj)
+		public virtual int GetHashCode(T obj)
 		{
 			return obj.GetHashCode();
 		}

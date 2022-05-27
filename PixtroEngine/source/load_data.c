@@ -29,10 +29,9 @@
 
 #define BGOFS ((vu16*)(REG_BASE + 0x0010))
 
-#define TILE_INFO ((unsigned short*)0x0201E000)
-
-#define LEVEL_REGION_A (unsigned short*)0x02020000
-#define LEVEL_REGION_B (unsigned short*)0x02030000
+#define TILE_INFO	   ((unsigned short*)0x02020000)
+#define LEVEL_POINTERS ((unsigned char**)0x0201F000)
+#define LOADED_LEVEL   ((unsigned short*)0x02030000)
 
 // the char array in rom of the current level being loaded
 unsigned char* level_rom;
@@ -42,19 +41,25 @@ unsigned short* level_ram;
 unsigned short* tileset_data;
 // Array of entities to prevent reloading
 unsigned int unloaded_entities[64];
-int unload_index, loading_width, loading_height;
+int unload_index;
 
-unsigned short test_values[256];
+char level_meta[128];
+
+// unsigned short test_values[256];
 
 int level_loading;
 
-int lvl_width, lvl_height, loading_width, loading_height;
+int lvl_width, lvl_height;
+
+#ifdef __DEBUG__
+int current_level_index;
+#endif
 
 extern int cam_x, cam_y, prev_cam_x, prev_cam_y;
 
 extern int foreground_count;
 
-extern char level_meta[128];
+extern Routine loading_routine;
 
 void set_loading_region(char region_b) {
 	level_ram = region_b ? LEVEL_REGION_B : LEVEL_REGION_A;
@@ -70,23 +75,22 @@ void set_entities_location() {
 	level_ram = level_ptr;
 }
 
-void load_midground() {
-	// Aligning rom pointer to 4 byte interval
-	level_rom += level_rom[0];
+void load_level(int level) {
+#ifdef __DEBUG__
+	current_level_index = level;
+#endif
 
-	int size = level_rom[0] | (level_rom[1] << 8);
-
-	level_rom += 2;
-
-	LZ77UnCompWram(level_rom, level_ram);
-
-	level_rom += size;
-
-	level_ram += (loading_width * loading_height);
+	level_loading = level;
+	level_rom	  = LEVEL_POINTERS[level];
+	load_level_code();
 }
-void load_entities() {
 
-	tileset_data += 2;
+void load_level_code() {
+
+	lvl_width  = ((short*)level_rom)[0];
+	lvl_height = ((short*)level_rom)[1];
+
+	level_rom += 4;
 
 	// Clear level metadata
 	int index;
@@ -94,22 +98,43 @@ void load_entities() {
 		level_meta[index] = 0;
 	}
 
-	index = *tileset_data;
-
 	// Set level metadata
-	while (index != 0xFFFF) {
-		tileset_data++;
-		level_meta[(index & 0xFF)] = index >> 8;
-		index					   = *tileset_data;
+	while (level_rom[0] != 0xFF) {
+		index = level_rom[0];
+
+		level_meta[(index & 0xFF)] = level_rom[1];
+		level_rom += 2;
 	}
-	tileset_data++;
+	level_rom++;
+
+	// Load tilesets
+	short* dst	 = LOADED_LEVEL;
+	tileset_data = LOADED_LEVEL;
+
+	for (index = 0; index < foreground_count; ++index) {
+
+		// Aligning rom pointer to 4 byte interval
+		level_rom += level_rom[0];
+
+		int size = level_rom[0] | (level_rom[1] << 8);
+
+		level_rom += 2;
+
+		LZ77UnCompWram(level_rom, dst);
+
+		level_rom += size;
+
+		dst += 0x2000;
+	}
 
 	// unload entities
 
+	index		 = 0;
 	max_entities = 0;
 	for (; index < ENTITY_LIMIT; ++index) {
 		if (ENT_FLAG(PERSISTENT, index)) {
-			entities[max_entities] = entities[index];
+			if (max_entities != index)
+				entities[max_entities] = entities[index];
 
 			++max_entities;
 		} else {
@@ -121,18 +146,19 @@ void load_entities() {
 		}
 	}
 
-	int val = tileset_data;
-	val += lvl_width * lvl_height * 2 * foreground_count;
-	val = (val + 3) & ~0x3;
+	// int val = tileset_data;
 
-	level_rom = *((unsigned int**)((unsigned int*)val));
+	// val += lvl_width * lvl_height * 2 * foreground_count;
+	// val = (val + 3) & ~0x3;
+
+	// level_rom = *((unsigned int**)((unsigned int*)val));
 
 	// load entities
 	int type;
 	type = *level_rom;
 	level_rom++;
 
-	while (type != 0xFF) {
+	while (type != 0xFF && max_entities < ENTITY_LIMIT) {
 		int x = level_rom[0],
 			y = level_rom[1];
 
@@ -142,8 +168,6 @@ void load_entities() {
 
 		if (is_loading)
 			++max_entities;
-		else
-			entities[max_entities].flags[4] &= ~ENT_LOADED_FLAG | ENT_ACTIVE_FLAG;
 
 		type = level_rom[0];
 
@@ -151,21 +175,77 @@ void load_entities() {
 	}
 }
 
+void load_level_pack(unsigned int* level_pack) {
+
+	int data		  = level_pack[0];
+	int index		  = 0;
+	int level_loading = 0;
+
+	LEVEL_POINTERS[level_loading++] = data;
+	level_pack++;
+
+	data = level_pack[0];
+
+	while (data) {
+		switch (data & 0xF) {
+			case 1: // Set up for next level
+
+				LEVEL_POINTERS[level_loading++] = (unsigned char*)level_pack[1];
+
+				level_pack++;
+				break;
+			case 4: // Load in tileset collision data
+				{
+					int i;
+
+					level_pack++;
+					for (i = 0; i < level_pack[i] < 0x0FFFFFFF; ++i) {
+						tile_types[i] = level_pack[i];
+						level_pack++;
+					}
+
+					break;
+				}
+		}
+
+		level_pack++;
+		data = level_pack[0];
+	}
+
+	// rt_begin(loading_routine);
+
+	// rt_while(data != 0);
+
+	// rt_step();
+
+	REMOVE_ENGINE_FLAG(LOADING_ASYNC);
+
+	// if (level_loading < 63) {
+	// 	level_loading++;
+	// 	loaded_levels_a[level_loading] = NULL;
+	// }
+
+	// if (onfinish_async_loading) {
+	// 	onfinish_async_loading();
+	// 	onfinish_async_loading = NULL;
+	// }
+}
+
 int add_entity_local(int x, int y, int type, int ent) {
 	entities[ent].vel_x = 0;
 	entities[ent].vel_y = 0;
 
-	entities[ent].x					= BLOCK2FIXED(x);
-	entities[ent].y					= BLOCK2FIXED(y);
-	entities[ent].ID				= type | (level_loading << 8);
-	entities[max_entities].flags[4] = ENT_LOADED_FLAG | ENT_VISIBLE_FLAG | ENT_ACTIVE_FLAG;
+	entities[ent].x	 = BLOCK2FIXED(x);
+	entities[ent].y	 = BLOCK2FIXED(y);
+	entities[ent].ID = type | (level_loading << 8);
+	entities[max_entities].ID |= ENT_LOADED_FLAG | ENT_VISIBLE_FLAG | ENT_ACTIVE_FLAG;
 
 	int is_loading = 1;
 
 	if (entity_inits[type])
 		level_rom += entity_inits[type](max_entities, level_rom, &is_loading);
 	else
-		entities[max_entities].flags[4] &= ~ENT_LOADED_FLAG | ENT_ACTIVE_FLAG;
+		entities[max_entities].ID &= ~ENT_LOADED_FLAG | ENT_ACTIVE_FLAG;
 
 	return is_loading;
 }
@@ -452,18 +532,18 @@ void move_cam() {
 
 	protect_cam();
 
+	if (foreground_count == 0)
+		goto skip_loadcam;
+
 	unsigned short* grounds[3] = {NULL, NULL, NULL};
 
-	int foreground_count = 0;
+	int j = 0;
 
 	for (int i = 0; i < 4; ++i) {
 		if (LAYER_GET_TYPE(layers[i]) == LStyle_FG) {
-			grounds[foreground_count++] = &se_mem[(layers[i].gba_meta & 0x1F00) >> 8];
+			grounds[j++] = &se_mem[(layers[i].gba_meta & 0x1F00) >> 8];
 		}
 	}
-
-	if (foreground_count == 0)
-		goto skip_loadcam;
 
 	int moveX = INT2BLOCK(cam_x) - INT2BLOCK(prev_cam_x),
 		moveY = INT2BLOCK(cam_y) - INT2BLOCK(prev_cam_y);
@@ -508,8 +588,8 @@ void move_cam() {
 				short* ptr = &tileset_data[startX + (min * lvl_width)];
 
 				grounds[0][position] = TILE_INFO[*ptr & 0xFFF] | (*ptr & 0xF000);
-				// if (grounds[1])
-				// 	grounds[1][position] = TILE_INFO[ptr[0x2000] & 0xFFF] | (ptr[0x2000] & 0xF000);
+				if (grounds[1])
+					grounds[1][position] = TILE_INFO[ptr[0x2000] & 0xFFF] | (ptr[0x2000] & 0xF000);
 				// if (background)
 				// 	background[position] = tileset_data[startX + (min * lvl_width) + 0x4000];
 			}
@@ -527,8 +607,8 @@ void move_cam() {
 				short* ptr = &tileset_data[min + (startY * lvl_width)];
 
 				grounds[0][position] = TILE_INFO[*ptr & 0xFFF] | (*ptr & 0xF000);
-				// if (grounds[1])
-				// 	grounds[1][position] = TILE_INFO[ptr[0x2000] & 0xFFF] | (ptr[0x2000] & 0xF000);
+				if (grounds[1])
+					grounds[1][position] = TILE_INFO[ptr[0x2000] & 0xFFF] | (ptr[0x2000] & 0xF000);
 				// if (background)
 				// 	background[position] = tileset_data[min + (startY * lvl_width) + 0x4000];
 			}
@@ -560,14 +640,15 @@ void reset_cam() {
 
 	x &= ~0x1;
 
-	unsigned short* foreground = se_mem[31];
-	unsigned short* midground  = se_mem[30];
-	unsigned short* background = se_mem[29];
+	unsigned short* grounds[3] = {NULL, NULL, NULL};
 
-	if (foreground_count < 3)
-		background = 0;
-	if (foreground_count < 2)
-		midground = 0;
+	int j = 0;
+
+	for (int i = 0; i < 4; ++i) {
+		if (LAYER_GET_TYPE(layers[i]) == LStyle_FG) {
+			grounds[j++] = &se_mem[(layers[i].gba_meta & 0x1F00) >> 8];
+		}
+	}
 
 	val = 22;
 	while (val-- > 0) {
@@ -580,10 +661,10 @@ void reset_cam() {
 
 		for (; idx > 0; idx--) {
 			short* ptr			 = &tileset_data[p2 + idx];
-			foreground[p1 + idx] = TILE_INFO[*ptr & 0xFFF] | (*ptr & 0xF000);
+			grounds[0][p1 + idx] = TILE_INFO[*ptr & 0xFFF] | (*ptr & 0xF000);
 
-			if (midground)
-				midground[p1 + idx] = TILE_INFO[ptr[0x2000] & 0xFFF] | (ptr[0x2000] & 0xF000);
+			if (grounds[1])
+				grounds[1][p1 + idx] = TILE_INFO[ptr[0x2000] & 0xFFF] | (ptr[0x2000] & 0xF000);
 			// if (background)
 			// 	background[p1 + idx] = tileset_data[p2 + 0x4000 + idx];
 		}
@@ -593,10 +674,10 @@ void reset_cam() {
 
 		for (idx = x; idx > 0; idx--) {
 			short* ptr			 = &tileset_data[p2 + idx];
-			foreground[p1 + idx] = TILE_INFO[*ptr & 0xFFF] | (*ptr & 0xF000);
+			grounds[0][p1 + idx] = TILE_INFO[*ptr & 0xFFF] | (*ptr & 0xF000);
 
-			if (midground)
-				midground[p1 + idx] = TILE_INFO[ptr[0x2000] & 0xFFF] | (ptr[0x2000] & 0xF000);
+			if (grounds[1])
+				grounds[1][p1 + idx] = TILE_INFO[ptr[0x2000] & 0xFFF] | (ptr[0x2000] & 0xF000);
 
 			// if (midground)
 			// 	midground[p1 + idx] = tileset_data[p2 + 0x2000 + idx];

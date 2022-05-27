@@ -82,7 +82,7 @@ namespace Pixtro.Compiler {
 		}
 		public void AddNewBrick(Brick brick)
 		{
-			if (bricks.Contains(brick, new CompareFlippable<Brick>() { flipStyle = FlipStyle.None }))
+			if (bricks.Contains(brick, new CompareBricks() { flipStyle = FlipStyle.None }))
 				return;
 
 			bricks.Add(brick);
@@ -348,7 +348,7 @@ namespace Pixtro.Compiler {
 				}
 			}
 
-			int count = 0;
+			int count = 0, max = 0;
 
 			byte[] retvalArray = new byte[width * height * 2];
 
@@ -435,6 +435,7 @@ namespace Pixtro.Compiler {
 						}
 						else {
 							retval = (ushort)(fullTileset.GetIndex(mappedTile, currentTile) + 1);
+							max = Math.Max(max, retval);
 							retval |= (ushort)(mappedTile.palette << 12);
 						}
 					}

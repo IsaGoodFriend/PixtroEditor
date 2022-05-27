@@ -1,64 +1,64 @@
 
-.text
+@ .text
 
-	.code	16
-	.align	2
-	.thumb_func
-@void lz10_decmp_WRAM(byte *source, byte *dest)
-lz10_decmp_WRAM:
-	swi		0x11
-	bx		lr
+@ 	.code	16
+@ 	.align	2
+@ 	.thumb_func
+@ @void lz10_decmp_WRAM(byte *source, byte *dest)
+@ lz10_decmp_WRAM:
+@ 	swi		0x11
+@ 	bx		lr
 
-	.globl	load_header
-	.code	32
-@ void load_header(unsigned char* ptr)
-@ r0 is always the level data pointer
-load_header:
+@ 	.globl	load_header
+@ 	.code	32
+@ @ void load_header(unsigned char* ptr)
+@ @ r0 is always the level data pointer
+@ load_header:
 	
-	ldr		r1, =level_ram
-	ldr		r1, [r1]
-	ldr		r3, =loading_width
-	ldrh	r2, [r0]
-	strh	r2, [r1]
-	str		r2, [r3]
-	ldrh	r2, [r0, #2]
-	strh	r2, [r1, #2]
-	ldr		r3, =loading_height
-	str		r2, [r3]		@ load width and height into level storage
+@ 	ldr		r1, =level_ram
+@ 	ldr		r1, [r1]
+@ 	ldr		r3, =
+@ 	ldrh	r2, [r0]
+@ 	strh	r2, [r1]
+@ 	str		r2, [r3]
+@ 	ldrh	r2, [r0, #2]
+@ 	strh	r2, [r1, #2]
+@ 	ldr		r3, =
+@ 	str		r2, [r3]		@ load width and height into level storage
 	
-	add		r0,	#4
-	add		r1,	#4
+@ 	add		r0,	#4
+@ 	add		r1,	#4
 	
-.ld_meta:
-	ldrb	r2,	[r0]		@ load meta index
+@ .ld_meta:
+@ 	ldrb	r2,	[r0]		@ load meta index
 	
-	cmp		r2, #128
-	bge		.ld_meta_e		@ skip if >= 128
+@ 	cmp		r2, #128
+@ 	bge		.ld_meta_e		@ skip if >= 128
 	
-	ldrb	r3,	[r0, #1]	@ load meta value
-	strb	r2, [r1]
-	strb	r3,	[r1, #1]	@ save meta value
-	add		r1, #2
+@ 	ldrb	r3,	[r0, #1]	@ load meta value
+@ 	strb	r2, [r1]
+@ 	strb	r3,	[r1, #1]	@ save meta value
+@ 	add		r1, #2
 	
-	add		r0,	#2			@ move to next meta index value
-	b		.ld_meta
-.ld_meta_e:
-	add		r0, #1
+@ 	add		r0,	#2			@ move to next meta index value
+@ 	b		.ld_meta
+@ .ld_meta_e:
+@ 	add		r0, #1
 	
-	mov		r2, #255
-	lsl		r2, #8
-	orr		r2, #255
-	strh	r2, [r1]
-	add		r1, #2
+@ 	mov		r2, #255
+@ 	lsl		r2, #8
+@ 	orr		r2, #255
+@ 	strh	r2, [r1]
+@ 	add		r1, #2
 	
-	@ --- end of loading ---
-	ldr		r2, =level_ram
-	str		r1, [r2]
+@ 	@ --- end of loading ---
+@ 	ldr		r2, =level_ram
+@ 	str		r1, [r2]
 	
-	ldr		r1, =level_rom
-	str		r0, [r1]
-	bx		lr
-@ end load_header
+@ 	ldr		r1, =level_rom
+@ 	str		r0, [r1]
+@ 	bx		lr
+@ @ end load_header
 
 @void fade_black(int factor) factor = 0-5
 @ r0 = factor

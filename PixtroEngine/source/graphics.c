@@ -83,7 +83,7 @@ int affine_count;
 
 #define UNLOADED_SPRITE 0xFF
 
-#define TILE_INFO ((unsigned short*)0x0201E000)
+#define TILE_INFO ((unsigned short*)0x02020000)
 
 // Sprite bank information
 char shapes[BANK_LIMIT];

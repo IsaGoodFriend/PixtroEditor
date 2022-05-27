@@ -21,17 +21,6 @@ Entity entities[ENTITY_LIMIT];
 void (*entity_update[32])(unsigned int index);
 void (*entity_render[32])(unsigned int index);
 
-// Level data
-char level_meta[128];
-extern unsigned int lvl_width, lvl_height;
-extern unsigned short* tileset_data;
-unsigned short *loaded_levels_a[64], *loaded_levels_b[64];
-unsigned int* loading_levelpack;
-extern unsigned char* level_rom;
-extern int level_loading;
-extern unsigned short* level_ram;
-extern unsigned int unloaded_entities[64];
-
 Routine loading_routine;
 void (*onfade_function)(Routine*);
 void (*onfinish_async_loading)();
@@ -43,7 +32,6 @@ unsigned int game_freeze;
 unsigned int engine_flags;
 #ifdef __DEBUG__
 unsigned int debug_engine_flags, debug_game_flags;
-int current_level_index;
 #endif
 int fade_timer;
 
@@ -77,12 +65,8 @@ extern void load_entities();
 // Initialize the game
 void pixtro_init() {
 	loading_routine.at = -1;
-	loaded_levels_a[0] = (unsigned short*)0x02020000;
-	loaded_levels_b[0] = (unsigned short*)0x02030000;
 
 	init_inputs();
-
-	set_loading_region(0);
 
 	// Set the RNG seeds.  Values can be any positive integer
 	rng_seed(RNG_SEED_1, RNG_SEED_2, RNG_SEED_3);
@@ -152,9 +136,11 @@ void pixtro_update() {
 			fade_timer++;
 	}
 
-	if (ENGINE_HAS_FLAG(LOADING_ASYNC)) {
-		async_loading();
-	}
+	// pal_bg_mem[0] = 0xFFFF;
+
+	// if (ENGINE_HAS_FLAG(LOADING_ASYNC)) {
+	// 	async_loading();
+	// }
 }
 
 // Rendering the game
@@ -191,103 +177,6 @@ void pixtro_render() {
 	if (fade_timer) {
 		fade_black(fade_timer <= 5 ? fade_timer : (10 - fade_timer));
 	}
-}
-
-// Level functions
-void move_to_level(int level, int section) {
-#ifdef __DEBUG__
-	current_level_index = level | (section << 8);
-#endif
-
-	tileset_data = section ? loaded_levels_b[level] : loaded_levels_a[level];
-	lvl_width	 = tileset_data[0];
-	lvl_height	 = tileset_data[1];
-
-	load_entities();
-}
-
-#define load_initialize()           \
-	if (loading_routine.at >= 0)    \
-		return;                     \
-	set_loading_region(section);    \
-	reset_routine(loading_routine); \
-	level_loading	  = 0;          \
-	loading_levelpack = level_pack;
-
-void load_level_pack(unsigned int* level_pack, int section) {
-	load_initialize();
-
-	while (loading_routine.at >= 0) {
-		async_loading();
-	}
-}
-void load_level_pack_async(unsigned int* level_pack, int section) {
-	load_initialize();
-
-	SET_ENGINE_FLAG(LOADING_ASYNC);
-}
-void async_loading() {
-
-	int data = loading_levelpack[0];
-
-	rt_begin(loading_routine);
-
-	load_header((unsigned char*)data);
-	loading_levelpack++;
-
-	rt_while(data != 0);
-
-	switch (data & 0xF) {
-		case 1: // Set up for next level
-			level_loading++;
-			loaded_levels_a[level_loading] = level_ram;
-
-			load_header((unsigned char*)loading_levelpack[1]);
-			loading_levelpack++;
-			break;
-		case 2:
-			load_midground();
-			break;
-		case 3:
-			set_entities_location();
-
-			break;
-		case 4: // Load in tileset collision data
-			{
-				int i;
-				// Is this needed?  Will there ever be a case where the game will read outside of the used tilesets?
-				// for (i = 0; i < 256; ++i)
-				//{
-				//	tile_types[i] = 0;
-				//}
-
-				loading_levelpack++;
-				for (i = 0; i < loading_levelpack[i] < 0x0FFFFFFF; ++i) {
-					tile_types[i] = loading_levelpack[i];
-					loading_levelpack++;
-				}
-
-				break;
-			}
-	}
-
-	loading_levelpack++;
-
-	rt_step();
-
-	REMOVE_ENGINE_FLAG(LOADING_ASYNC);
-
-	if (level_loading < 63) {
-		level_loading++;
-		loaded_levels_a[level_loading] = NULL;
-	}
-
-	if (onfinish_async_loading) {
-		onfinish_async_loading();
-		onfinish_async_loading = NULL;
-	}
-
-	rt_end();
 }
 
 // Basic engine functions

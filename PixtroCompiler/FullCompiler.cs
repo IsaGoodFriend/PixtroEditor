@@ -273,14 +273,16 @@ namespace Pixtro.Compiler
 			string toSavePath = Path.Combine(Settings.ProjectPath, BuildToPath);
 
 
-			Dictionary<string, VisualPackMetadata> parseData = JsonConvert.DeserializeObject<Dictionary<string, VisualPackMetadata>>(File.ReadAllText(levelPath + "\\meta_level.json"));
+			Dictionary<string, VisualPackMetadata> metaLevelJson = JsonConvert.DeserializeObject<Dictionary<string, VisualPackMetadata>>(File.ReadAllText(levelPath + "\\meta_level.json"));
 
 			// Get all the art from the tilesets and compile them into C# code for ease of access
 			//CompileTilesets(tilesetPath);
 
 			// Finalize tile mapping
-			foreach (var p in parseData)
+			foreach (var p in metaLevelJson)
 			{
+				if (p.Value.Wrapping == null)
+					continue;
 				p.Value.Name = p.Key;
 
 				foreach (char c in p.Value.Wrapping.Keys)
@@ -291,13 +293,27 @@ namespace Pixtro.Compiler
 					{
 						string[] split = wrap.MappingCopy.Split('/', '\\');
 
-						var otherWrap = parseData[split[0]].Wrapping[split[1][0]];
+						var otherWrap = metaLevelJson[split[0]].Wrapping[split[1][0]];
 
 						wrap.Mapping = otherWrap.Mapping;
 						wrap.TileMapping = otherWrap.TileMapping;
 					}
 
 					wrap.FinalizeMasks();
+				}
+			}
+			if (metaLevelJson.ContainsKey("global")) {
+				var globalMeta = metaLevelJson["global"];
+
+				foreach (var p in metaLevelJson.Values) {
+					if (p == globalMeta)
+						continue;
+					if (p.EntityIndex == null)
+						p.EntityIndex = new Dictionary<string, int>();
+					foreach (var pair in globalMeta.EntityIndex) {
+						if (!p.EntityIndex.ContainsKey(pair.Key))
+							p.EntityIndex.Add(pair.Key, pair.Value);
+					}
 				}
 			}
 
@@ -326,7 +342,7 @@ namespace Pixtro.Compiler
 				}
 				levelPacks.Add(name, levelList);
 
-				foreach (var p in parseData.Values)
+				foreach (var p in metaLevelJson.Values)
 				{
 					if (p.LevelPacks == null)
 						continue;
@@ -341,12 +357,13 @@ namespace Pixtro.Compiler
 
 
 			// Compile levels
-			foreach (var pair in parseData)
+			foreach (var pair in metaLevelJson)
 			{
 				var parse = pair.Value;
 
 				if (parse.levelsIncluded.Count == 0)
 					continue;
+
 				// Compile the visual pack's brickset before compiling levels
 				MainProgram.Log($"Compiling Visual Pack {pair.Key}");
 
@@ -418,7 +435,7 @@ namespace Pixtro.Compiler
 				levelCompiler.EndArray();
 
 				// Compile the collision types of each brick
-				levelCompiler.BeginArray(CompileToC.ArrayType.UInt, "TILECOLL_" + parse.Name);
+				levelCompiler.BeginArray(CompileToC.ArrayType.UShort, "TILECOLL_" + parse.Name);
 				foreach (var tile in fullTileset)
 				{
 					levelCompiler.AddValue((tile.collisionType << 8) | tile.collisionShape);
@@ -593,11 +610,11 @@ namespace Pixtro.Compiler
 
 					CompiledLevel level = compiledLevels[levelList[i].Replace('/', '_').Replace('\\', '_')];
 
-					for (int j = 0; j < level.Layers; ++j)
-					{
-						levelCompiler.AddValue((2) | (j << 4));
-					}
-					levelCompiler.AddValue(3);
+					//for (int j = 0; j < level.Layers; ++j)
+					//{
+					//	levelCompiler.AddValue((2) | (j << 4));
+					//}
+					//levelCompiler.AddValue(3);
 				}
 
 				levelCompiler.AddValue(0);
@@ -690,7 +707,7 @@ namespace Pixtro.Compiler
 						}
 
 						// TODO: auto detect level pack if not given a third argument
-						return levelPacks[pack].IndexOf(args[1]);
+						return levelPacks[pack].IndexOf($"{args[2]}/{args[1]}");
 					}
 				}
 
