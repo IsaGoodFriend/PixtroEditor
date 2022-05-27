@@ -126,8 +126,7 @@ void load_sprite_at(unsigned int* sprite, int index, int shape) {
 		return;
 	}
 
-	// might move this code elsewhere.  Could be causing our anim bug
-	// anim_bank[index] = NULL;
+	anim_bank[index] = NULL;
 
 	int bankLoc, size = shape2size[shape];
 
@@ -199,18 +198,36 @@ void load_anim_sprite_at(unsigned int* sprites, int index, int shape, int frames
 
 	anim_bank[index] = sprites;
 
-	speed &= 0xF;
-	speed = (speed)&0xF;
+	speed = (speed - 1) & 0xF;
+
 	if (frames)
 		frames = (frames - 1) & 0xF;
 
 	anim_meta[index] = speed;
 	anim_meta[index] |= speed << 4;
 
-	anim_meta[index] |= frames << 8;
 	anim_meta[index] |= frames << 12;
 
 	anim_meta[index] |= shape << 16;
+}
+
+int get_anim_frame(int anim) {
+	if (anim_bank[anim] == NULL)
+		return 0;
+	return (anim_meta[anim] >> 8) & 0xF;
+}
+int get_anim_tick(int anim) {
+	if (anim_bank[anim] == NULL)
+		return 0;
+	return anim_meta[anim] & 0xF;
+}
+int get_anim_time(int anim) {
+	if (anim_bank[anim] == NULL)
+		return 0;
+
+	int speed = (anim_meta[anim] >> 12) & 0xF;
+	speed	  = ((anim_meta[anim] >> 8) & 0xF) * (speed + 1);
+	return speed + (anim_meta[anim] & 0xF);
 }
 
 void unload_sprite(int index) {
@@ -236,7 +253,7 @@ void load_obj_pal(unsigned short* pal, int palIndex) {
 }
 void load_bg_pal(unsigned short* pal, int palIndex) {
 	memcpy(&pal_bg_mem[palIndex << 4], pal, copyPalette);
-	memcpy(&colorbank[palIndex << 3], pal, copyPalette);
+	memcpy(&colorbank[palIndex << 4], pal, copyPalette);
 }
 
 void draw_affine_big(AffineMatrix matrix, int sprite, int prio, int pal) {

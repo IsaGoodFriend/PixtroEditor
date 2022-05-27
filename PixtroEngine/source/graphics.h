@@ -136,6 +136,10 @@ void load_anim_sprite_at(unsigned int* sprites, int index, int shape, int frames
 void load_obj_pal(unsigned short* pal, int palIndex);
 void load_bg_pal(unsigned short* pal, int palIndex);
 
+int get_anim_frame(int anim);
+int get_anim_tick(int anim);
+int get_anim_time(int anim);
+
 // ---- Tilesets ----
 #define LOAD_TILESET(name) load_tileset((unsigned int*)TILESET_##name, (unsigned short*)TILE_MAPPING_##name, (unsigned int*)TILECOLL_##name, TILESET_##name##_len, TILESET_##name##_uvlen)
 void load_tileset(unsigned int* tiles, unsigned short* mapping, unsigned int* collision, int count, int uvcount);
