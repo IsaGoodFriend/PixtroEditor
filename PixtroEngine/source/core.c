@@ -62,8 +62,6 @@ void load_settings();
 void interrupt();
 void load_background_tiles(int index, unsigned int* tiles, unsigned int tile_len, int size);
 
-extern void set_entities_location();
-
 extern void init();
 extern void init_settings();
 

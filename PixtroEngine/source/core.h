@@ -4,52 +4,6 @@
 #include "coroutine.h"
 #include "engine.h"
 
-// ---- Entities ----
-// The basic entity structure.
-typedef struct
-{
-	int x, y, vel_x, vel_y;
-	// Width of the entity in pixels
-	unsigned short width;
-	// Height of the entity in pixels
-	unsigned short height;
-	// The unique id each entity gets.  Determines what kind of entity it is and which level it was first loaded from.
-	unsigned int ID;
-	unsigned int collision_flags;
-
-	unsigned int flags[5];
-} ALIGN4 Entity;
-
-#define ENT_TYPE(n) (entities[n].ID & 0xFF)
-
-#define ENT_FLAG(name, n)		  (entities[n].ID & ENT_##name##_FLAG)
-#define ENABLE_ENT_FLAG(name, n)  entities[n].ID |= ENT_##name##_FLAG
-#define DISABLE_ENT_FLAG(name, n) entities[n].ID &= ~(ENT_##name##_FLAG)
-
-// If enabled, this entity won't be unloaded when moving between levels
-#define PERSISTENT
-// If enabled, this entity will update as normal
-#define ACTIVE
-
-#define ENT_LOADED_FLAG		0x00010000
-#define ENT_PERSISTENT_FLAG 0x00020000
-#define ENT_ACTIVE_FLAG		0x00040000
-#define ENT_VISIBLE_FLAG	0x00080000
-#define ENT_DETECT_FLAG		0x00100000
-#define ENT_COLLIDE_FLAG	0x00110000
-
-#define LOAD_ENTITY(name, i)           \
-	entity_inits[i]	 = &name##_init;   \
-	entity_update[i] = &name##_update; \
-	entity_render[i] = &name##_render
-
-extern unsigned int max_entities;
-
-extern int (*entity_inits[32])(unsigned int actor_index, unsigned char* data, unsigned char* is_loading);
-extern Entity entities[ENTITY_LIMIT];
-extern void (*entity_update[32])(unsigned int index);
-extern void (*entity_render[32])(unsigned int index);
-
 // ---- ENGINE ----
 //
 extern unsigned int game_life, levelpack_life, level_life;
