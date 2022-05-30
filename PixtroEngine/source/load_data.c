@@ -40,7 +40,8 @@ unsigned short* level_ram;
 // the start of the current level
 unsigned short* tileset_data;
 // Array of entities to prevent reloading
-unsigned int unloaded_entities[64];
+#define unloaded_len 128
+short unloaded_entities[128];
 int unload_index;
 
 char level_meta[128];
@@ -61,15 +62,48 @@ extern int foreground_count;
 
 extern Routine loading_routine;
 
-void set_entities_location() {
-	int val = level_ram;
-	val		= (val + 3) & ~0x3;
+void load_level_pack(unsigned int* level_pack) {
 
-	unsigned int* level_ptr = (unsigned int*)val;
-	level_ptr[0]			= level_rom;
-	level_ptr++;
+	for (int i = 0; i < unloaded_len; i++) {
+		unloaded_entities[i] = -1;
+	}
 
-	level_ram = level_ptr;
+	int data		  = level_pack[0];
+	int index		  = 0;
+	int level_loading = 0;
+
+	LEVEL_POINTERS[level_loading++] = data;
+	level_pack++;
+
+	data = level_pack[0];
+
+	while (data) {
+		switch (data & 0xF) {
+			case 1: // Set up for next level
+
+				LEVEL_POINTERS[level_loading++] = (unsigned char*)level_pack[1];
+
+				level_pack++;
+				break;
+			case 4: // Load in tileset collision data
+				{
+					int i;
+
+					level_pack++;
+					for (i = 0; i < level_pack[i] < 0x0FFFFFFF; ++i) {
+						tile_types[i] = level_pack[i];
+						level_pack++;
+					}
+
+					break;
+				}
+		}
+
+		level_pack++;
+		data = level_pack[0];
+	}
+
+	REMOVE_ENGINE_FLAG(LOADING_ASYNC);
 }
 
 void load_level(int level) {
@@ -155,77 +189,42 @@ void load_level_code() {
 	type = *level_rom;
 	level_rom++;
 
+	index = 0;
+
 	while (type != 0xFF && max_entities < ENTITY_LIMIT) {
 		int x = level_rom[0],
 			y = level_rom[1];
-
 		level_rom += 2;
 
-		int is_loading = add_entity_local(x, y, type, max_entities);
+		int ent_idx = (level_loading) | (index << 6);
 
-		if (is_loading)
-			++max_entities;
+		for (int i = 0; unloaded_entities[i] != -1; i++) {
+			if (unloaded_entities[i] == ent_idx) {
+				ent_idx = -1;
+				break;
+			}
+		}
+
+		if (ent_idx >= 0) {
+			ent_idx <<= 5;
+			int is_loading = add_entity_local(x, y, type, max_entities);
+
+			if (is_loading) {
+				entities[max_entities].ID |= ent_idx;
+				++max_entities;
+			}
+		}
+
+		while (*level_rom++ != 0xFF)
+			;
 
 		type = level_rom[0];
 
+		index++;
 		level_rom++;
 	}
-}
 
-void load_level_pack(unsigned int* level_pack) {
-
-	int data		  = level_pack[0];
-	int index		  = 0;
-	int level_loading = 0;
-
-	LEVEL_POINTERS[level_loading++] = data;
-	level_pack++;
-
-	data = level_pack[0];
-
-	while (data) {
-		switch (data & 0xF) {
-			case 1: // Set up for next level
-
-				LEVEL_POINTERS[level_loading++] = (unsigned char*)level_pack[1];
-
-				level_pack++;
-				break;
-			case 4: // Load in tileset collision data
-				{
-					int i;
-
-					level_pack++;
-					for (i = 0; i < level_pack[i] < 0x0FFFFFFF; ++i) {
-						tile_types[i] = level_pack[i];
-						level_pack++;
-					}
-
-					break;
-				}
-		}
-
-		level_pack++;
-		data = level_pack[0];
-	}
-
-	// rt_begin(loading_routine);
-
-	// rt_while(data != 0);
-
-	// rt_step();
-
-	REMOVE_ENGINE_FLAG(LOADING_ASYNC);
-
-	// if (level_loading < 63) {
-	// 	level_loading++;
-	// 	loaded_levels_a[level_loading] = NULL;
-	// }
-
-	// if (onfinish_async_loading) {
-	// 	onfinish_async_loading();
-	// 	onfinish_async_loading = NULL;
-	// }
+	level_rom = NULL;
 }
 
 int add_entity_local(int x, int y, int type, int ent) {
@@ -234,15 +233,15 @@ int add_entity_local(int x, int y, int type, int ent) {
 
 	entities[ent].x	 = BLOCK2FIXED(x);
 	entities[ent].y	 = BLOCK2FIXED(y);
-	entities[ent].ID = type | (level_loading << 8);
-	entities[max_entities].ID |= ENT_LOADED_FLAG | ENT_VISIBLE_FLAG | ENT_ACTIVE_FLAG;
+	entities[ent].ID = type;
+	entities[ent].ID |= ENT_LOADED_FLAG | ENT_VISIBLE_FLAG | ENT_ACTIVE_FLAG;
 
 	int is_loading = 1;
 
 	if (entity_inits[type])
-		level_rom += entity_inits[type](max_entities, level_rom, &is_loading);
+		entity_inits[type](ent, level_rom, &is_loading);
 	else
-		entities[max_entities].ID &= ~ENT_LOADED_FLAG | ENT_ACTIVE_FLAG;
+		entities[ent].ID &= ~ENT_LOADED_FLAG | ENT_ACTIVE_FLAG;
 
 	return is_loading;
 }
@@ -267,6 +266,17 @@ int add_entity(int x, int y, int type) {
 
 	level_rom = ptr;
 	return retval;
+}
+
+void unload_entity(Entity* ent) {
+	int idx = (ent->ID & (ENT_ID_LEVEL | ENT_ID_INDEX)) >> 5;
+
+	for (int i = 0; i < unloaded_len; i++) {
+		if (unloaded_entities[i] == -1) {
+			unloaded_entities[i] = idx;
+			break;
+		}
+	}
 }
 
 void protect_cam() {
@@ -632,8 +642,8 @@ void reset_cam() {
 
 	int val;
 
-	int x = INT2BLOCK(cam_x);
-	int y = INT2BLOCK(cam_y);
+	int x = INT2BLOCK(cam_x) - 1;
+	int y = INT2BLOCK(cam_y) - 1;
 
 	x &= ~0x1;
 
@@ -654,7 +664,7 @@ void reset_cam() {
 		int p2 = (y * lvl_width) + x;
 		++y;
 
-		int idx = 32 - x;
+		int idx = 31 - x;
 
 		for (; idx > 0; idx--) {
 			short* ptr			 = &tileset_data[p2 + idx];
