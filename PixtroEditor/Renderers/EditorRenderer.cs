@@ -42,6 +42,19 @@ namespace Pixtro.Editor {
 			Draw.Rect(0, EditorWindow.TOP_MENU_BAR - 2, Engine.ViewWidth, 2, ColorSchemes.CurrentScheme.Separation);
 			Draw.Rect(0, Engine.ViewHeight - EditorWindow.BOTTOM_MENU_BAR, Engine.ViewWidth, 2, ColorSchemes.CurrentScheme.Separation);
 
+			if (Emulation.EmulationHandler.Communication != null) {
+				uint flags = (uint)Emulation.EmulationHandler.Communication.GetIntFromRam("debug_flags");
+
+				Rectangle rect = new Rectangle(2, Engine.ViewHeight - 14, 24, 12);
+
+				for (int i = 0; i < 32; i++) {
+					Draw.Rect(rect, (flags & 0x80000000) > 0 ? Color.LightGreen : Color.Maroon);
+					flags <<= 1;
+					rect.X += rect.Width + 6;
+					if ((i & 0x3) == 3)
+						rect.X += 16;
+				}
+			}
 
 			Draw.Depth = Draw.FARTHEST_DEPTH;
 

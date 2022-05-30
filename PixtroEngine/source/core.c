@@ -30,9 +30,22 @@ Routine onfade_routine;
 unsigned int game_life, levelpack_life, level_life;
 unsigned int game_freeze;
 unsigned int engine_flags;
+
 #ifdef __DEBUG__
+
 unsigned int debug_engine_flags, debug_game_flags;
+unsigned int debug_flags;
+
+#define GAME_DFLAG_WAITING 0x00000001
+
+#define ENG_DFLAG_PAUSE_UPDATES 0x00000001
+
+#define ENGINE_DEBUGFLAG(name) (debug_engine_flags & ENG_DFLAG_##name)
+#define SET_DEBUGFLAG(name)	   (debug_game_flags |= GAME_DFLAG_##name)
+#define REMOVE_DEBUGFLAG(name) (debug_game_flags &= ~GAME_DFLAG_##name)
+
 #endif
+
 int fade_timer;
 
 // Saveram
