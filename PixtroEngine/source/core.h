@@ -115,9 +115,11 @@ void reset_settings();
 char char_from_file(int index);
 short short_from_file(int index);
 int int_from_file(int index);
+long long_from_file(int index);
 void char_to_file(int index, char value);
 void short_to_file(int index, short value);
 void int_to_file(int index, int value);
+void long_to_file(int index, long value);
 
 char char_from_settings(int index);
 short short_from_settings(int index);

@@ -51,7 +51,7 @@ int fade_timer;
 // Saveram
 #define SAVE_INDEX (save_file_number * SAVEFILE_LEN) + SETTING_LEN
 
-char save_data[SAVEFILE_LEN - 1], settings_file[SETTING_LEN - 1];
+char save_data[SAVEFILE_LEN], settings_file[SETTING_LEN];
 int save_file_number;
 
 // Other
@@ -77,6 +77,7 @@ extern void load_entities();
 
 // Initialize the game
 void pixtro_init() {
+
 	loading_routine.at = -1;
 
 	init_inputs();
@@ -99,6 +100,7 @@ void pixtro_init() {
 
 // The game's update loop
 void pixtro_update() {
+
 	// Skip running update if editor wants game paused
 #ifdef __DEBUG__
 	if (ENGINE_DEBUGFLAG(PAUSE_UPDATES))
@@ -171,6 +173,7 @@ void pixtro_render() {
 	update_particles();
 
 	if (fade_timer != 5) {
+
 		// Render each visible entity
 		for (i = 0; i < max_entities; ++i) {
 			if (!ENT_FLAG(VISIBLE, i) || !ENT_FLAG(LOADED, i) || !entity_render[ENT_TYPE(i)])
@@ -213,25 +216,23 @@ void load_settings() {
 
 	if (sram_mem[0] == 0xFF) {
 
-		sram_mem[0] = 0;
-
-		for (index = 0; index < SETTING_LEN - 1; ++index) {
+		for (index = 0; index < SETTING_LEN; ++index) {
 			settings_file[index] = 0;
 		}
 
 		init_settings();
 		save_settings();
 	} else {
-		for (index = 0; index < SETTING_LEN - 1; ++index) {
-			settings_file[index] = sram_mem[index + 1];
+		for (index = 0; index < SETTING_LEN; ++index) {
+			settings_file[index] = sram_mem[index];
 		}
 	}
 }
 void save_settings() {
 	int i;
 
-	for (i = 0; i < SETTING_LEN - 1; ++i) {
-		sram_mem[i + 1] = settings_file[i];
+	for (i = 0; i < SETTING_LEN; ++i) {
+		sram_mem[i] = settings_file[i];
 	}
 }
 void reset_settings() {
@@ -249,6 +250,7 @@ void reset_file() {
 
 	for (index = 0; index < SAVEFILE_LEN; ++index) {
 		sram_mem[index + index2] = 0xFF;
+		save_data[index]		 = 0x00;
 	}
 }
 void save_file() {
@@ -291,7 +293,14 @@ short short_from_file(int index) {
 	return (save_data[index]) + (save_data[index + 1] << 8);
 }
 int int_from_file(int index) {
-	return (save_data[index]) + (save_data[index + 1] << 8) + (save_data[index + 2] << 16) + (save_data[index + 3] << 24);
+	return (save_data[index]) + (save_data[index + 1] << 8);
+}
+long long_from_file(int index) {
+	long val = int_from_file(index + 4);
+	val <<= 32;
+	val |= int_from_file(index);
+
+	return val;
 }
 void char_to_file(int index, char value) {
 	save_data[index] = value;
@@ -308,6 +317,14 @@ void int_to_file(int index, int value) {
 	int i;
 
 	for (i = 0; i < 4; ++i) {
+		save_data[index + i] = value & 0xFF;
+		value >>= 8;
+	}
+}
+void long_to_file(int index, long value) {
+	int i;
+
+	for (i = 0; i < 8; ++i) {
 		save_data[index + i] = value & 0xFF;
 		value >>= 8;
 	}
