@@ -16,9 +16,14 @@ namespace Pixtro.Editor {
 
 		public static void BeginGraphics(Scene scene, Effect eff = null) {
 
-			//Render everything on a moving camera
+			var viewport = new Viewport(scene.VisualBounds);
+
+			//viewport.Y += EditorWindow.SUB_MENU_BAR;
+			//viewport.Height -= EditorWindow.SUB_MENU_BAR;
+			Engine.Instance.GraphicsDevice.Viewport = viewport;
+
 			Draw.SpriteBatch.GraphicsDevice.SetRenderTarget(null);
-			Draw.SpriteBatch.Begin(SpriteSortMode.FrontToBack, Blending, Sampling, DepthStencilState.DepthRead, RasterizerState.CullNone, eff, scene.Camera.Matrix * Matrix.CreateTranslation(0, 50, 0));
+			Draw.SpriteBatch.Begin(SpriteSortMode.FrontToBack, Blending, Sampling, DepthStencilState.DepthRead, RasterizerState.CullNone, eff, scene.Camera.Matrix);
 
 		}
 		public static void EndGraphics() {
@@ -29,12 +34,6 @@ namespace Pixtro.Editor {
 		public override void Render(Scene scene) {
 			base.Render(scene);
 
-			var viewport = Engine.Instance.GraphicsDevice.Viewport;
-
-			viewport.Y += EditorWindow.SUB_MENU_BAR;
-			viewport.Height -= EditorWindow.SUB_MENU_BAR;
-			Engine.Instance.GraphicsDevice.Viewport = viewport;
-
 			BeginGraphics(scene);
 
 			scene.DrawGraphics();
@@ -42,6 +41,7 @@ namespace Pixtro.Editor {
 			EndGraphics();
 
 
+			var viewport = new Viewport(scene.VisualBounds);
 			viewport.Y -= EditorWindow.SUB_MENU_BAR;
 			viewport.Height += EditorWindow.SUB_MENU_BAR;
 			Engine.Instance.GraphicsDevice.Viewport = viewport;

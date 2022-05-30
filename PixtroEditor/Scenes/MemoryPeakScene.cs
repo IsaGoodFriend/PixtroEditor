@@ -29,16 +29,16 @@ namespace Pixtro.Scenes {
 			};
 
 			testObject.x = BLOCK2FIXED(1) + 0;
-			testObject.y = BLOCK2FIXED(3) - 0x300;
+			testObject.y = BLOCK2FIXED(1);
 			//testObject.velx = 0x10;
-			testObject.vely = -0x500;
+			testObject.vely = -0x00;
 
 			for (int i = 0; i < 5; i++)
 				ground[i, 4] = 1;
 
-			ground[2, 0] = 1;
-			ground[2, 1] = 1;
-			ground[2, 2] = 1;
+			//ground[2, 0] = 1;
+			//ground[2, 1] = 1;
+			//ground[2, 2] = 1;
 			
 		}
 
@@ -59,8 +59,8 @@ namespace Pixtro.Scenes {
 				scrollOffset = 0;
 
 			//testObject.x = BLOCK2FIXED(0);
-			testObject.velx = 0x01;
-			testObject.vely = 0x01;
+			//testObject.velx = 0x01;
+			//testObject.vely += 0x40;
 
 			//testPhysics(testObject);
 
@@ -177,7 +177,7 @@ namespace Pixtro.Scenes {
 					if (block == 0)
 						continue;
 
-					int shape = 0x100;
+					int shape = 0x101;
 					int type  = (shape & TILE_TYPE_MASK) >> TILE_TYPE_SHIFT;
 					int mask  = 1 << (type - 1);
 
@@ -196,7 +196,15 @@ namespace Pixtro.Scenes {
 							break;
 
 						default:
-							continue;
+							temp_offset = 0;
+
+							if (temp_offset >= 0) {
+								temp_offset = BLOCK2FIXED(idxY - y_is_neg) - INT2FIXED(ent.height * y_is_pos) - ent.y;
+							}
+							else {
+								continue;
+							}
+							break;
 					}
 
 					if (INT_ABS(temp_offset) < INT_ABS(offsetY)) // If new movement is smaller, set collision data.
@@ -271,7 +279,7 @@ namespace Pixtro.Scenes {
 		public override void DrawGraphics() {
 			base.DrawGraphics();
 
-			if (!EmulationHandler.GameRunning)
+			if (EmulationHandler.Communication == null)
 				return;
 
 

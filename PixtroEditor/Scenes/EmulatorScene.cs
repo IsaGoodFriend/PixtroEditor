@@ -21,7 +21,7 @@ namespace Pixtro.Scenes {
 
 		public EmulatorScene() {
 			texture = new Texture2D(Draw.SpriteBatch.GraphicsDevice, 240, 160);
-			bufferA = new RenderTarget2D(Draw.SpriteBatch.GraphicsDevice, 240, 160);
+			bufferA = new RenderTarget2D(Draw.SpriteBatch.GraphicsDevice, 240, 160, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
 
 			var image = new Image(new MTexture(texture));
 		}
@@ -53,6 +53,17 @@ namespace Pixtro.Scenes {
 		void UpdateScreen() {
 
 			texture.SetData(EmulationHandler.VideoBuffer());
+
+			//Draw.SpriteBatch.GraphicsDevice.Viewport = new Viewport(0, 0, 240, 160);
+			Draw.SpriteBatch.GraphicsDevice.SetRenderTarget(bufferA);
+
+			Draw.SpriteBatch.Begin(effect: effects[0]);
+
+			Draw.SpriteBatch.Draw(texture, new Rectangle(0, 0, 240, 160), Color.White);
+
+			Draw.SpriteBatch.End();
+
+			Draw.SpriteBatch.GraphicsDevice.SetRenderTarget(null);
 		}
 
 		public override void Update() {
@@ -86,22 +97,14 @@ namespace Pixtro.Scenes {
 		bool litScreen = true;
 
 		public override void DrawGraphics() {
-			//base.DrawGraphics();
+			base.DrawGraphics();
 
 			effects[1].SetParameter("time", Engine.TimeAlive);
 			effects[1].SetParameter("on", litScreen ? 1 : 0);
 
 			SceneRenderer.EndGraphics();
-
-			Draw.SpriteBatch.Begin(effect: effects[0]);
-			Draw.SpriteBatch.GraphicsDevice.SetRenderTarget(bufferA);
-
-			Draw.SpriteBatch.Draw(texture, new Rectangle(0, 0, 240, 160), Color.White);
-
-			Draw.SpriteBatch.End();
-
-
 			SceneRenderer.BeginGraphics(this); // effects[1]
+
 
 			Draw.SpriteBatch.Draw(bufferA, Vector2.Zero, Color.White);
 		}

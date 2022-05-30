@@ -71,6 +71,7 @@ namespace Pixtro.Scenes {
 		public override void DrawGraphics() {
 			base.DrawGraphics();
 
+
 			for (int i = CONSOLE_LINES - 1; i >= 0; i--) {
 				int index = (i + ConsoleIndex) % CONSOLE_LINES;
 				if (ConsoleLines[index] == null)
