@@ -39,17 +39,22 @@ namespace Pixtro.Emulation {
 		public static void LoadGame(byte[] data) {
 			if (emulator != null)
 				emulator.Dispose();
-			emulator = null;
 			emulator = new MGBAHawk(data);
+
+			Communication = null;
 
 			ApiManager.Restart(new BasicServiceProvider(emulator), null, emulator, new GameInfo() { });
 
-			using (var fs = File.Open(Path.Combine(Projects.ProjectInfo.CurrentProject.ProjectDirectory, "build", "output.map"), FileMode.Open))
-				Communication = new GameCommunicator(new StreamReader(fs));
+			string path = Path.Combine(Projects.ProjectInfo.CurrentProject.ProjectDirectory, "build", "output.map");
+			if (File.Exists(path)) {
 
-			ServiceInjector.UpdateServices(emulator.ServiceProvider, Communication);
+				using (var fs = File.Open(path, FileMode.Open))
+					Communication = new GameCommunicator(new StreamReader(fs));
 
-			Communication.RomLoaded();
+				ServiceInjector.UpdateServices(emulator.ServiceProvider, Communication);
+
+				Communication.RomLoaded();
+			}
 		}
 		public static void LoadGame(string path) {
 			LoadGame(File.ReadAllBytes(path));
@@ -81,8 +86,6 @@ namespace Pixtro.Emulation {
 				buffer = emulator.GetVideoBuffer();
 
 				OnScreenRedraw();
-
-
 			}
 		}
 		public static int[] VideoBuffer() {

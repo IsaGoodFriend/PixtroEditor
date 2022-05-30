@@ -98,14 +98,16 @@ namespace Pixtro.Compiler
 		static Dictionary<string, List<string>> levelPacks = new Dictionary<string, List<string>>();
 		static List<string> usedLevels = new List<string>();
 
-		private static string currentType;
+		private static string currentPack;
+
+		private static int currentType;
 
 		private static int entGlobalCount, entSectionCount, entLocalCount;
 
-		private static Dictionary<string, int> 
-			typeGlobalCount = new Dictionary<string, int>(),
-			typeSectionCount = new Dictionary<string, int>(),
-			typeLocalCount = new Dictionary<string, int>();
+		private static Dictionary<int, int> 
+			typeGlobalCount = new Dictionary<int, int>(),
+			typeSectionCount = new Dictionary<int, int>(),
+			typeLocalCount = new Dictionary<int, int>();
 
 		static void ClearDictionaries()
 		{
@@ -364,6 +366,8 @@ namespace Pixtro.Compiler
 				if (parse.levelsIncluded.Count == 0)
 					continue;
 
+				currentPack = pair.Key;
+
 				// Compile the visual pack's brickset before compiling levels
 				MainProgram.Log($"Compiling Visual Pack {pair.Key}");
 
@@ -438,6 +442,8 @@ namespace Pixtro.Compiler
 				levelCompiler.BeginArray(CompileToC.ArrayType.UShort, "TILECOLL_" + parse.Name);
 				foreach (var tile in fullTileset)
 				{
+					int index = fullTileset.GetIndex(tile, tile.collisionChar);
+
 					levelCompiler.AddValue((tile.collisionType << 8) | tile.collisionShape);
 				}
 				levelCompiler.AddValue(0xFFFF);
@@ -589,9 +595,9 @@ namespace Pixtro.Compiler
 			// Compile Level Packs
 			foreach (var pack in levelPacks)
 			{
-				string name = pack.Key;
+				currentPack = pack.Key;
 
-				levelCompiler.BeginArray(CompileToC.ArrayType.UInt, "PACK_" + name);
+				levelCompiler.BeginArray(CompileToC.ArrayType.UInt, "PACK_" + currentPack);
 
 				List<string> levelList = new List<string>();
 
@@ -674,6 +680,9 @@ namespace Pixtro.Compiler
 
 			double getvals(string[] args)
 			{
+				string pack = currentPack.ToLower();
+				int i;
+
 				switch (args[0].ToLower())
 				{
 					case "entglobalcount":
@@ -684,30 +693,33 @@ namespace Pixtro.Compiler
 						return entSectionCount;
 
 					case "typeglobalcount":
-						return typeGlobalCount[currentType];
+						if (!typeGlobalCount.TryGetValue(currentType, out i))
+							return 0;
+						return i;
 					case "typelocalcount":
-						return typeLocalCount[currentType];
+						if (!typeLocalCount.TryGetValue(currentType, out i))
+							return 0;
+						return i;
 					case "typesectioncount":
-						return typeSectionCount[currentType];
+						if (!typeSectionCount.TryGetValue(currentType, out i))
+							return 0;
+						return i;
 
 					case "packsize":
-						return levelPacks[args[1]].Count;
+						if (args.Length >= 2) {
+							pack = args[1];
+						}
+
+						return levelPacks[pack].Count;
 
 					case "levelindex":
 					{
-						string pack;
-
-						if (args.Length < 3)
-						{
-							pack = "NULL";
-						}
-						else
-						{
+						if (args.Length >= 3) {
 							pack = args[2];
 						}
 
 						// TODO: auto detect level pack if not given a third argument
-						return levelPacks[pack].IndexOf($"{args[2]}/{args[1]}");
+						return levelPacks[pack].IndexOf($"{pack}/{args[1]}");
 					}
 				}
 
@@ -771,6 +783,7 @@ namespace Pixtro.Compiler
 									{
 										ent.type = (byte)child.GetInteger("type");
 									}
+									currentType = ent.type;
 
 									level.entities.Add(ent);
 
@@ -802,7 +815,6 @@ namespace Pixtro.Compiler
 									entGlobalCount++;
 									entSectionCount++;
 
-									currentType = child.GetString("name");
 
 									if (!typeLocalCount.ContainsKey(currentType))
 									{
@@ -876,24 +888,23 @@ namespace Pixtro.Compiler
 								entity.x = int.Parse(split[1]);
 								entity.y = int.Parse(split[2]);
 
+								byte type;
+								if (!byte.TryParse(split[0], out type)) {
+									entity.type = CompiledLevel.DataParse.EntityIndex[split[0]];
+								}
+								currentType = entity.type;
+
 								for (int i = 3; i < split.Length; ++i)
 								{
 									entity.data.Add(ParseMetadata(split[i]));
 								}
 
-								byte type;
-								if (!byte.TryParse(split[0], out type))
-								{
-									entity.type = CompiledLevel.DataParse.EntityIndex[split[0]];
-								}
 
 								retval.entities.Add(entity);
 
 								entLocalCount++;
 								entGlobalCount++;
 								entSectionCount++;
-
-								currentType = split[0];
 
 								if (!typeLocalCount.ContainsKey(currentType))
 									typeLocalCount.Add(currentType, 0);

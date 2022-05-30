@@ -26,7 +26,8 @@
 			"tonc_vscode.h": "c",
 			"math.h": "c",
 			"load_data.h": "c",
-			"core.h": "c"
+			"core.h": "c",
+			"string.h": "c"
 		}
 	}
 }

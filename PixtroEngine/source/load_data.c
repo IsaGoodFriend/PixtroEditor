@@ -7,12 +7,6 @@
 #include "math.h"
 #include "physics.h"
 
-#define FIXED2BLOCK(n) ((n) >> (ACC + BLOCK_SHIFT))
-#define BLOCK2FIXED(n) ((n) << (ACC + BLOCK_SHIFT))
-
-#define INT2BLOCK(n) ((n) >> (BLOCK_SHIFT))
-#define BLOCK2INT(n) ((n) << (BLOCK_SHIFT))
-
 #define FIXED2TILE(n) ((n) >> (ACC + 3))
 #define TILE2FIXED(n) ((n) << (ACC + 3))
 

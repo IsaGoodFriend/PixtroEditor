@@ -1,13 +1,13 @@
-#include <maxmod.h>
 #include "tonc_vscode.h"
+#include <maxmod.h>
 
 #include "soundbank.h"
 #include "soundbank_bin.h"
 
 #include "core.h"
 
-int main()
-{
+int main() {
+
 	// Mute game until ready
 	REG_SNDDSCNT = 0;
 
@@ -25,8 +25,7 @@ int main()
 	REG_SNDDSCNT |= SDS_AR | SDS_AL | SDS_BR | SDS_BL;
 
 	// Game loop
-	while (1)
-	{
+	while (1) {
 		// Get input
 		key_poll();
 
