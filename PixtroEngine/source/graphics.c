@@ -87,7 +87,7 @@ int affine_count;
 
 // Sprite bank information
 char shapes[BANK_LIMIT];
-int indexes[BANK_LIMIT], ordered[BANK_LIMIT];
+int sprite_indexes[BANK_LIMIT], ordered[BANK_LIMIT];
 
 unsigned int *anim_bank[BANK_LIMIT], anim_meta[BANK_LIMIT], wait_to_load[BANK_LIMIT];
 
@@ -112,7 +112,7 @@ int load_anim_sprite(unsigned int* sprites, int shape, int frames, int speed) {
 	int value = 0;
 
 	for (; value < BANK_LIMIT; ++value) {
-		if (indexes[value] == NULL) {
+		if (shapes[value] == UNLOADED_SPRITE) {
 			load_anim_sprite_at(sprites, value, shape, frames, speed);
 			return value;
 		}
@@ -132,7 +132,7 @@ void load_sprite_at(unsigned int* sprite, int index, int shape) {
 
 	// If there's a sprite already loaded here, and it's the same size or bigger, replace it
 	if (shapes[index] < 12 && shape2size[shapes[index]] >= size) {
-		bankLoc = indexes[index];
+		bankLoc = sprite_indexes[index];
 	} else {
 		int i;
 		bankLoc = BANK_MEM_START;
@@ -140,14 +140,14 @@ void load_sprite_at(unsigned int* sprite, int index, int shape) {
 		// Search for an open spot in the sprites
 		for (i = 0; i < BANK_LIMIT; ++i) {
 
-			int diff = indexes[ordered[i + 1]] - indexes[ordered[i]];
+			int diff = sprite_indexes[ordered[i + 1]] - sprite_indexes[ordered[i]];
 
 			if (shapes[ordered[i]] < 12) {
 				diff -= shape2size[shapes[ordered[i]]] >> 5;
 			}
 
 			if (diff >= size >> 5) {
-				bankLoc = indexes[ordered[i]];
+				bankLoc = sprite_indexes[ordered[i]];
 
 				if (shapes[ordered[i]] < 12)
 					bankLoc += shape2size[shapes[ordered[i]]] >> 5;
@@ -155,7 +155,7 @@ void load_sprite_at(unsigned int* sprite, int index, int shape) {
 				break;
 			}
 		}
-		indexes[index] = bankLoc & 0x7FFF;
+		sprite_indexes[index] = bankLoc & 0x7FFF;
 
 		bool swapping = false;
 
@@ -173,14 +173,14 @@ void load_sprite_at(unsigned int* sprite, int index, int shape) {
 			}
 		}
 
-		while (ind > 0 && indexes[ordered[ind - 1]] > bankLoc) {
+		while (ind > 0 && sprite_indexes[ordered[ind - 1]] > bankLoc) {
 			int temp		 = ordered[ind - 1];
 			ordered[ind - 1] = index;
 			ordered[ind]	 = temp;
 
 			ind--;
 		}
-		while (ind < BANK_LIMIT - 1 && indexes[ordered[ind + 1]] < bankLoc) {
+		while (ind < BANK_LIMIT - 1 && sprite_indexes[ordered[ind + 1]] < bankLoc) {
 			int temp		 = ordered[ind + 1];
 			ordered[ind + 1] = index;
 			ordered[ind]	 = temp;
@@ -249,7 +249,7 @@ void load_tileset(unsigned int* tiles, unsigned short* mapping, unsigned int* co
 #endif
 void load_obj_pal(unsigned short* pal, int palIndex) {
 	memcpy(&pal_obj_mem[palIndex << 4], pal, copyPalette);
-	memcpy(&colorbank[(palIndex << 3) + 256], pal, copyPalette);
+	memcpy(&colorbank[(palIndex << 4) + 256], pal, copyPalette);
 }
 void load_bg_pal(unsigned short* pal, int palIndex) {
 	memcpy(&pal_bg_mem[palIndex << 4], pal, copyPalette);
@@ -282,7 +282,7 @@ void draw_affine_big(AffineMatrix matrix, int sprite, int prio, int pal) {
 	obj_set_attr(sprite_pointer,
 				 ((shape & 0xC) << 12) | SPRITE_Y(y) | ATTR0_AFF_DBL,
 				 ((shape & 0x3) << 14) | SPRITE_X(x) | ATTR1_AFF_ID(affine_count),
-				 ATTR2_PALBANK(pal) | ATTR2_PRIO(prio) | (indexes[sprite]));
+				 ATTR2_PALBANK(pal) | ATTR2_PRIO(prio) | (sprite_indexes[sprite]));
 
 	int det = FIXED_MULT(matrix.values[0], matrix.values[4]) -
 			  FIXED_MULT(matrix.values[1], matrix.values[3]);
@@ -328,7 +328,7 @@ void draw_affine(AffineMatrix matrix, int sprite, int prio, int pal) {
 	obj_set_attr(sprite_pointer,
 				 ((shape & 0xC) << 12) | SPRITE_Y(y) | ATTR0_AFF,
 				 ((shape & 0x3) << 14) | SPRITE_X(x) | ATTR1_AFF_ID(affine_count),
-				 ATTR2_PALBANK(pal) | ATTR2_PRIO(prio) | (indexes[sprite]));
+				 ATTR2_PALBANK(pal) | ATTR2_PRIO(prio) | (sprite_indexes[sprite]));
 
 	int det = FIXED_MULT(matrix.values[0], matrix.values[4]) -
 			  FIXED_MULT(matrix.values[1], matrix.values[3]);
@@ -367,7 +367,7 @@ void draw(int x, int y, int sprite, int flip, int prio, int pal) {
 	obj_set_attr(sprite_pointer,
 				 ((shape & 0xC) << 12) | SPRITE_Y(y),
 				 ((shape & 0x3) << 14) | SPRITE_X(x) | flip,
-				 ATTR2_PALBANK(pal) | ATTR2_PRIO(prio) | (indexes[sprite]));
+				 ATTR2_PALBANK(pal) | ATTR2_PRIO(prio) | (sprite_indexes[sprite]));
 
 	++sprite_pointer;
 	++sprite_count;
@@ -531,6 +531,17 @@ void finalize_layers() {
 
 #pragma endregion
 
+void unload_sprites() {
+
+	for (int i = 1; i < BANK_LIMIT; ++i) {
+		sprite_indexes[i] = 0x8000;
+		ordered[i]		  = i;
+		shapes[i]		  = UNLOADED_SPRITE;
+		anim_meta[i]	  = 0;
+		wait_to_load[i]	  = 0;
+	}
+}
+
 void init_drawing() {
 	is_rendering = 0;
 
@@ -550,12 +561,12 @@ void init_drawing() {
 	sprite_pointer = (OBJ_ATTR*)&obj_buffer;
 	int i;
 
-	indexes[0] = BANK_MEM_START;
-	shapes[0]  = UNLOADED_SPRITE;
+	sprite_indexes[0] = BANK_MEM_START;
+	shapes[0]		  = UNLOADED_SPRITE;
 	for (i = 1; i < BANK_LIMIT; ++i) {
-		indexes[i] = 0x8000;
-		ordered[i] = i;
-		shapes[i]  = UNLOADED_SPRITE;
+		sprite_indexes[i] = 0x8000;
+		ordered[i]		  = i;
+		shapes[i]		  = UNLOADED_SPRITE;
 	}
 
 	layer_updates = SCREENBLOCK_UPDATED;
@@ -572,7 +583,10 @@ void begin_drawing() {
 
 	for (i = 0; i < BANK_LIMIT; ++i) {
 		if (wait_to_load[i]) {
+			int* temp = anim_bank[i];
 			load_sprite_at(wait_to_load[i] & 0x0FFFFFFF, i, (wait_to_load[i] >> 28));
+
+			anim_bank[i] = temp;
 
 			wait_to_load[i] = 0;
 		}

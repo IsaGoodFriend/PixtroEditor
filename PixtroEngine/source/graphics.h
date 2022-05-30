@@ -148,6 +148,7 @@ void draw(int x, int y, int sprite, int flip, int prio, int pal);
 void draw_affine(AffineMatrix matrix, int sprite, int prio, int pal);
 void draw_affine_big(AffineMatrix matrix, int sprite, int prio, int pal);
 
+void unload_sprites();
 void init_drawing();
 void end_drawing();
 
