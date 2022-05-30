@@ -348,7 +348,7 @@ namespace Pixtro.Compiler {
 				}
 			}
 
-			int count = 0, max = 0;
+			int count = 0;
 
 			byte[] retvalArray = new byte[width * height * 2];
 
@@ -380,11 +380,17 @@ namespace Pixtro.Compiler {
 							if (wrapping.MappingSpecial != null)
 								foreach (string str in wrapping.MappingSpecial)
 								{
+									Match m = Regex.Match(str, @"([0-9\-]+), *([0-9\-]+) *; *(\w+)");
+									if (!m.Success)
+										continue;
 
-									//var dp = new DataParser(str);
+									Point ex = new Point(Math.Clamp(x + int.Parse(m.Groups[1].Value), 0, width - 1), Math.Clamp(y + int.Parse(m.Groups[2].Value), 0, height - 1));
+									char val = levelData[layer, ex.X, ex.Y];
 
-									//value <<= 1;
-									//value |= (uint)(dp.GetBoolean(getvalue) ? 1 : 0);
+									value <<= 1;
+									if (m.Groups[3].Value.Contains(val)) {
+										value |= 1;
+									}
 								}
 
 							foreach (var key in wrapping.TileMapping.Keys)
@@ -435,7 +441,6 @@ namespace Pixtro.Compiler {
 						}
 						else {
 							retval = (ushort)(fullTileset.GetIndex(mappedTile, currentTile) + 1);
-							max = Math.Max(max, retval);
 							retval |= (ushort)(mappedTile.palette << 12);
 						}
 					}
