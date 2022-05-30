@@ -4,28 +4,20 @@
 #include "math.h"
 #include "physics.h"
 
-#define fixed int
-
-#define FIXED2BLOCK(n) ((n) >> (ACC + BLOCK_SHIFT))
-#define BLOCK2FIXED(n) ((n) << (ACC + BLOCK_SHIFT))
-
-#define INT2BLOCK(n) ((n) >> (BLOCK_SHIFT))
-#define BLOCK2INT(n) ((n) << (BLOCK_SHIFT))
-
 #define TILE_TYPE_SHIFT 8
-#define TILE_TYPE_MASK	0x0000FF00
-#define TILE_SHAPE_MASK 0x000000FF
+#define TILE_TYPE_MASK	0xFF00
+#define TILE_SHAPE_MASK 0x00FF
 
 unsigned short* tile_types = (unsigned short*)0x02022000;
 
-int (*physics_code[255])(void);
+bool (*physics_code[255])(int, int, int, int, int, bool);
 bool (*collide_code[255])(int, int, int, int);
 
 extern unsigned int lvl_width, lvl_height;
 extern unsigned short* tileset_data;
 
 void load_tiletypes(unsigned short* coll_data) {
-	int readValue = *coll_data;
+	int readValue = *coll_data++;
 	int index	  = 0;
 
 	while (readValue != 0xFFFF) {
@@ -73,7 +65,7 @@ unsigned int entity_physics(Entity* ent, int hit_mask) {
 	// Block values that were hit - flag
 	int hit_value_x = 0, hit_value_y = 0;
 
-	int offsetX = 0xFFFFFF, offsetY = 0xFFFFFF;
+	int offsetX = 0xFFFF, offsetY = 0xFFFF;
 
 	int vel;
 	if (!ent->vel_x)
@@ -97,7 +89,7 @@ unsigned int entity_physics(Entity* ent, int hit_mask) {
 
 			shape = shape & TILE_SHAPE_MASK;
 
-			int temp_offset = 0xFFFF;
+			int temp_offset = 0xFFFFF;
 
 			// detecting colliison
 			switch (shape) {
@@ -105,12 +97,18 @@ unsigned int entity_physics(Entity* ent, int hit_mask) {
 				case 0:
 					temp_offset = (BLOCK2FIXED(idxX - x_is_neg) - INT2FIXED(ent->width * x_is_pos)) - ent->x;
 					break;
-
 				default:
 					if (physics_code[shape - 1]) {
-						temp_offset = physics_code[shape - 1]();
+						temp_offset = physics_code[shape - 1](FIXED2INT(ent->x) - BLOCK2INT(idxY), FIXED2INT(ent->y) - BLOCK2INT(idxY), ent->width, ent->height, vel, false);
+
+						if (temp_offset >= 0) {
+							temp_offset = BLOCK2FIXED(idxX - x_is_neg) - INT2FIXED(ent->width * x_is_pos) - ent->x;
+						} else {
+							temp_offset = 0xFFFFF;
+						}
+					} else {
+						continue;
 					}
-					continue;
 			}
 
 			if (INT_ABS(temp_offset) < INT_ABS(offsetX)) // If new movement is smaller, set collision data.
@@ -158,17 +156,27 @@ unsigned int entity_physics(Entity* ent, int hit_mask) {
 
 			shape = shape & TILE_SHAPE_MASK;
 
-			int temp_offset = 0xFFFF;
+			int temp_offset = 0xFFFFF;
 
 			// detecting collision
 			switch (shape) {
 
 				case 0:
-					temp_offset = (BLOCK2FIXED(idxY - y_is_neg) - INT2FIXED(ent->height * y_is_pos)) - ent->y;
+					temp_offset = BLOCK2FIXED(idxY - y_is_neg) - INT2FIXED(ent->height * y_is_pos) - ent->y;
 					break;
 
 				default:
-					continue;
+					if (physics_code[shape - 1]) {
+						temp_offset = physics_code[shape - 1](FIXED2INT(ent->x) - BLOCK2INT(idxY), FIXED2INT(ent->y) - BLOCK2INT(idxY), ent->width, ent->height, vel, true);
+
+						if (temp_offset >= 0) {
+							temp_offset = BLOCK2FIXED(idxY - y_is_neg) - INT2FIXED(ent->height * y_is_pos) - ent->y;
+						} else {
+							temp_offset = 0xFFFFF;
+						}
+					} else {
+						continue;
+					}
 			}
 
 			if (INT_ABS(temp_offset) < INT_ABS(offsetY)) // If new movement is smaller, set collision data.
@@ -241,25 +249,24 @@ unsigned int collide_rect(int x, int y, int width, int height, int hit_mask) {
 
 	return hitValue;
 }
-unsigned int collide_entity(unsigned int ID) {
+int collide_entity(unsigned int index) {
 	int i = 0;
 
-	Entity *id = &entities[ID], *other;
+	Entity* this = &entities[index], *other;
 
-	int id_LX = FIXED2INT(id->x);
-	int id_LY = FIXED2INT(id->y);
-	int id_RX = id_LX + id->width - 1;
-	int id_RY = id_LY + id->height - 1;
+	int id_LX = FIXED2INT(this->x);
+	int id_LY = FIXED2INT(this->y);
+	int id_RX = id_LX + this->width - 1;
+	int id_RY = id_LY + this->height - 1;
 	int iter_LX, iter_LY, iter_RX, iter_RY;
 
 	for (; i < ENTITY_LIMIT; ++i) {
-		if (i == ID)
+		if (i == index)
+			continue;
+		if (!ENT_FLAG(ACTIVE, i) || !ENT_FLAG(DETECT, i))
 			continue;
 
 		other = &entities[i];
-
-		if (!ENT_FLAG(ACTIVE, i) || !ENT_FLAG(DETECT, i))
-			continue;
 
 		iter_LX = FIXED2INT(other->x);
 		iter_LY = FIXED2INT(other->y);
@@ -269,7 +276,7 @@ unsigned int collide_entity(unsigned int ID) {
 		if (id_RX < iter_LX || iter_RX < id_LX || id_RY < iter_LY || iter_RY < id_LY)
 			continue;
 
-		return other->ID;
+		return i;
 	}
-	return 0xFFFFFFFF;
+	return -1;
 }
