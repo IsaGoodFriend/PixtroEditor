@@ -50,6 +50,6 @@
     <ProjectReference Include="..\PixtroCompiler\PixtroCompiler.csproj" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy /y /d /s &quot;$(ProjectDir)Assets\*&quot; &quot;$(ProjectDir)$(OutDir)&quot;&#xD;&#xA;xcopy /y /d /s &quot;$(SolutionDir)PixtroEngine\source\*&quot; &quot;$(ProjectDir)$(OutDir)\src\&quot;" />
+    <Exec Command="xcopy /y /d /s &quot;$(ProjectDir)Assets\*&quot; &quot;$(ProjectDir)$(OutDir)&quot;&#xD;&#xA;robocopy &quot;$(ProjectDir)\Content\Graphics&quot; &quot;$(ProjectDir)$(OutDir)\Content\Graphics&quot; *.png /MIR&#xD;&#xA;xcopy /y /d /s &quot;$(SolutionDir)PixtroEngine\source\*&quot; &quot;$(ProjectDir)$(OutDir)\src\&quot;" />
   </Target>
 </Project>

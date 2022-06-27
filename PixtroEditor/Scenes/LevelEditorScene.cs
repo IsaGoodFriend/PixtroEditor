@@ -2,6 +2,7 @@
 using System.Text;
 using System.Collections.Generic;
 using System;
+using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Monocle;
 using Microsoft.Xna.Framework;
@@ -24,10 +25,12 @@ namespace Pixtro.Scenes {
 		public readonly Dictionary<char, Tileset> Tilesets;
 		public readonly List<char> CharIndex;
 		public readonly VisualPackMetadata VisualData;
+		public readonly Dictionary<char, MTexture> Previews;
 
 		public LevelPack(VisualPackMetadata pack) {
 			List<Point> offsets = new List<Point>();
 			StringToTileset = new Dictionary<string, Tileset>();
+			Previews = new Dictionary<char, MTexture>();
 			Tilesets = new Dictionary<char, Tileset>();
 			Tilesets.Add(' ', null);
 			CharIndex = new List<char>();
@@ -36,21 +39,35 @@ namespace Pixtro.Scenes {
 			VisualData = pack;
 
 			foreach (var item in pack.Wrapping) {
-				if (item.Value.Tileset != null && item.Value.Mapping != null) {
-					foreach (var p in item.Value.Mapping)
+				var wrap = item.Value;
+
+				if (wrap.Tileset != null && wrap.Mapping != null) {
+					foreach (var p in wrap.Mapping)
 						if (!offsets.Contains(new Point(p.X, p.Y)))
 							offsets.Add(new Point(p.X, p.Y));
 
-					if (!StringToTileset.ContainsKey(item.Value.Tileset)) {
-						StringToTileset.Add(item.Value.Tileset, new Tileset(Atlases.GameSprites[$"tilesets/{item.Value.Tileset}"], 8, 8));
+					if (!StringToTileset.ContainsKey(wrap.Tileset)) {
+						StringToTileset.Add(wrap.Tileset, new Tileset(Atlases.GameSprites[$"tilesets/{wrap.Tileset}"], 8, 8));
 					}
 
-					Tilesets.Add(item.Key, StringToTileset[item.Value.Tileset]);
+					Tilesets.Add(item.Key, StringToTileset[wrap.Tileset]);
 				}
 				else {
 					Tilesets.Add(item.Key, null);
 				}
 
+				MTexture image;
+				if (wrap.PreviewSprite != null) {
+					image = Atlases.GameSprites[$"{wrap.PreviewSprite}"];
+				}
+				else if (wrap.Preview != null) {
+					var point = wrap.Preview.Value;
+					image = Tilesets[item.Key][point.X, point.Y];
+				}
+				else 
+					image = GetTile(1, 1, 100, 100, (x, y) => (x <= 1) ? item.Key : ' ');
+
+				Previews.Add(item.Key, image);
 				CharIndex.Add(item.Key);
 			}
 
@@ -62,9 +79,12 @@ namespace Pixtro.Scenes {
 		public MTexture GetTile(int x, int y, VirtualMap<char> tiles) {
 
 			var value = tiles[x, y];
+			if (value == ' ')
+				return null;
+
 			var tileset = Tilesets[value];
 			if (tileset == null)
-				return null;
+				return Previews[value];
 
 			var points = VisualData.Wrapping[value].GetWrapping((x, y) => tiles[x, y], x, y, tiles.Columns, tiles.Rows);
 
@@ -75,7 +95,7 @@ namespace Pixtro.Scenes {
 
 			return tileset[point.X, point.Y];
 		}
-		public MTexture GetTile(int x, int y, int width, int height, Func<int, int, char> getTile) {
+		private MTexture GetTile(int x, int y, int width, int height, Func<int, int, char> getTile) {
 
 			var value = getTile(x, y);
 			var tileset = Tilesets[value];
@@ -352,18 +372,30 @@ namespace Pixtro.Scenes {
 
 			VisualData = Projects.ProjectInfo.CurrentProject.VisualPacks["Prologue"];
 
-			MainLevel = new LevelContainer("prologue/lvl1.txt");
+			MainLevel = new LevelContainer("prologue/lvl1s.txt");
 			rawTilemap = MainLevel.tileMaps[0].tiles;
 			HelperEntity.Add(visualGrid = new TileGrid(TileSize, TileSize, MainLevel.Width, MainLevel.Height));
 			SettleAllTiles();
 
 			var item = UIBounds.AddChild(new TilesetPalette(this)) as TilesetPalette;
-
 			item.UpdateTo(VisualData);
+
+			UIBounds.AddChild(new IconBarButton(new Image(Atlases.EngineGraphics["UI/folder"])) {
+				OnClick = () => {
+
+					var task = new Task(OpenNew);
+					task.Wait();
+
+					return null;
+				}
+			});
 
 			brushValue = VisualData.CharIndex[1];
 			brushIndex = 1;
 
+
+		}
+		private void OpenNew() {
 			
 		}
 

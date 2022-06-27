@@ -248,6 +248,9 @@ namespace Pixtro.Editor {
 			public void ResizeWindow(Rectangle bound)
 			{
 				BoundingRect = bound;
+				bound.Y += EditorWindow.SUB_MENU_BAR;
+				bound.Height -= EditorWindow.SUB_MENU_BAR;
+				RootScene.UIBounds.Transform.Bounds = bound;
 			}
 			public void FinalizeSize()
 			{

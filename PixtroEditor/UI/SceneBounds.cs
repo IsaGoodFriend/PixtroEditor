@@ -14,12 +14,5 @@ namespace Pixtro.UI {
 
 			Transform.Bounds = scene.VisualBounds;
 		}
-
-		protected internal override void Update() {
-			Transform.Bounds = scene.VisualBounds;
-
-			base.Update();
-
-		}
 	}
 }

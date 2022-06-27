@@ -41,7 +41,7 @@ namespace Pixtro.UI {
 
 			highlighted = -1;
 
-			if (p.X < 2 || p.Y < 2 || p.X >= bufferSize - 2 || p.Y >= bufferSize - 2)
+			if (p.X < 0 || p.Y < 0 || p.X >= bufferSize - 4 || p.Y >= bufferSize - 4)
 				return;
 
 			highlighted = index;
@@ -49,25 +49,19 @@ namespace Pixtro.UI {
 
 		protected internal override void Update() {
 			base.Update();
-			if (UIFramework.HoveredControl != this)
+			if (highlighted >= 0 && UIFramework.HoveredControl != this)
 				highlighted = -1;
 		}
 
 		public void UpdateTo(LevelPack metadata) {
-			images = new Image[metadata.CharIndex.Count - 1];
-			Transform.Size = new Point(40, 40 * images.Length);
+			int count = metadata.CharIndex.Count - 1;
+			images = new Image[count];
+			Transform.Size = new Point(bufferSize, bufferSize * images.Length);
 
-			for (int i = 0; i < metadata.CharIndex.Count - 1; i++) {
+			for (int i = 0; i < count; i++) {
 				char c = metadata.CharIndex[i + 1];
 
-				if (metadata.VisualData.Wrapping[c].Preview != null) {
-					var item = metadata.VisualData.Wrapping[c].Preview.Value;
-					images[i] = new Image(metadata.Tilesets[c][item.X, item.Y]);
-				}
-				else {
-					images[i] = new Image(metadata.GetTile(1, 1, 100, 100, (x, y) => (x <= 1) ? c : ' '));
-				}
-				
+				images[i] = new Image(metadata.Previews[c]);				
 			}
 		}
 
@@ -76,7 +70,7 @@ namespace Pixtro.UI {
 
 			if (images.Length > 0) {
 
-				Draw.Rect(Transform.X, Transform.Y, bufferSize - 2, bufferSize * images.Length - 2, ColorSchemes.CurrentScheme.Separation);
+				Draw.Rect(Transform.X, Transform.Y, bufferSize - 2, (bufferSize * images.Length) - 2, ColorSchemes.CurrentScheme.Separation);
 
 				Draw.Depth += 2;
 

@@ -19,6 +19,7 @@ namespace Pixtro.Editor {
 		public const int HEIGHT_SUB = TOP_MENU_BAR + BOTTOM_MENU_BAR;
 
 		BarButton[] buttons;
+		Dropdown rightClickMenu;
 
 		public EditorWindow() : base(1280, 720, 1280, 720, "Pixtro", false) {
 			IsMouseVisible = true;
@@ -138,6 +139,8 @@ namespace Pixtro.Editor {
 
 			EmulationHandler.Update();
 
+			Point p = new Point((int)MInput.Mouse.X, (int)MInput.Mouse.Y);
+
 			if (EmulationHandler.GameRunning) {
 				buttons[2].Highlighted = EmulationHandler.HardPause;
 				buttons[3].Highlighted = EmulationHandler.ManualSoftPause;
@@ -145,6 +148,40 @@ namespace Pixtro.Editor {
 			else {
 				buttons[2].Highlighted = false;
 				buttons[3].Highlighted = false;
+			}
+
+			if (rightClickMenu != null) {
+				if (!rightClickMenu.Transform.Bounds.Contains(p)) {
+					UIFramework.RemoveControl(rightClickMenu);
+					rightClickMenu = null;
+				}
+			}
+			if (MInput.Mouse.PressedRightButton) {
+				var item = Layout.GetElementAt(p);
+
+				if (UIFramework.HoveredControl != null) {
+
+				}
+				else if (item is EditorLayout.LayoutSplit) {
+
+					rightClickMenu = new Dropdown(
+						("Aa", (i) => { })
+					);
+				}
+				else {
+
+					rightClickMenu = new Dropdown(
+						("Vertical Split Here", (i) => { Layout.SplitAt(p, EditorLayout.SplitDirection.Vertical); }),
+						("Horizontal Split Here", (i) => { Layout.SplitAt(p, EditorLayout.SplitDirection.Vertical); } )
+					);
+				}
+
+				if (rightClickMenu != null) {
+
+					rightClickMenu.Position = p - new Point(2);
+					rightClickMenu.Depth = 100;
+					UIFramework.AddControl(rightClickMenu);
+				}
 			}
 
 			//if (!EmulationHandler.GameRunning) {
