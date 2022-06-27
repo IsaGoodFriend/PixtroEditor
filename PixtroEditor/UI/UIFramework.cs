@@ -14,14 +14,14 @@ namespace Pixtro.UI {
 		public static Control HoveredControl { get; private set; }
 		public static Control ClickedControl { get; private set; }
 
-		public static void AddControl(Control control) {
+		public static Control AddControl(Control control) {
 			if (!controls.Contains(control) || !toAdd.Contains(control))
 				controls.Add(control);
 
 			foreach (var child in control.children)
-				if (!controls.Contains(child) || !toAdd.Contains(child))
-					controls.Add(child);
-			
+				AddControl(child);
+
+			return control;
 		}
 		public static void RemoveControl(Control control) {
 			if (!controls.Contains(control) || toRemove.Contains(control))
@@ -48,7 +48,7 @@ namespace Pixtro.UI {
 			}
 
 			if (MInput.Mouse.ReleasedLeftButton) {
-				if (ClickedControl != null && ClickedControl.Bounds.Contains(mouse))
+				if (ClickedControl != null && ClickedControl.Transform.Bounds.Contains(mouse))
 					ClickedControl.Click();
 				ClickedControl = null;
 			}
@@ -61,7 +61,7 @@ namespace Pixtro.UI {
 					if (!cnt.Interactable)
 						continue;
 
-					if (cnt.Bounds.Contains(mouse)) {
+					if (cnt.Transform.Bounds.Contains(mouse)) {
 						if (currentHover == null || cnt.Depth < currentHover.Depth)
 							currentHover = cnt;
 					}
@@ -72,7 +72,7 @@ namespace Pixtro.UI {
 					ClickedControl = currentHover;
 				}
 			}
-			if (SelectedControl != null && SelectedControl.Bounds.Contains(mouse)) {
+			if (SelectedControl != null && SelectedControl.Transform.Bounds.Contains(mouse)) {
 				HoveredControl = SelectedControl;
 
 				if (!MInput.Mouse.CheckLeftButton) {

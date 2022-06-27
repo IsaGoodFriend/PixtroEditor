@@ -77,8 +77,6 @@ namespace Monocle {
 		private static Rectangle rect;
 		private static int entityDepth;
 
-		public const int DEFAULT_TEXT_SIZE = 14;
-		public const float DEFAULTFONT_SIZE = 144f;
 		public static SpriteFont DefaultFont;
 
 		enum VertType {
@@ -390,15 +388,15 @@ namespace Monocle {
 
 		#region Text
 
-		public static Vector2 MeasureText(string text, int size = DEFAULT_TEXT_SIZE, SpriteFont font = null) {
+		public static Vector2 MeasureText(string text, SpriteFont font = null) {
 			font = font ?? DefaultFont;
-			return font.MeasureString(text) * size / DEFAULTFONT_SIZE;
+			return font.MeasureString(text);
 		}
-		public static void Text(string text, Vector2 position, Color color, SpriteFont font = null, int size = DEFAULT_TEXT_SIZE, int _depthOffset = 0) {
-			SpriteBatch.DrawString(font??DefaultFont, text, Calc.Floor(position), color, 0, Vector2.Zero, size / DEFAULTFONT_SIZE, SpriteEffects.None, RealDepth + (_depthOffset * SB_DEPTH_DIV));
-		}
-		public static void Text(string text, Vector2 position, Color color, Vector2 origin, Vector2 scale, float rotation, SpriteFont font = null, int size = DEFAULT_TEXT_SIZE, int _depthOffset = 0) {
-			SpriteBatch.DrawString(font??DefaultFont, text, Calc.Floor(position), color, rotation, origin, scale * (size / DEFAULTFONT_SIZE), SpriteEffects.None, RealDepth + (_depthOffset * SB_DEPTH_DIV));
+		public static void Text(string text, Vector2 position, Color color, SpriteFont font = null, int _depthOffset = 0) {
+			SpriteBatch.DrawString(font??DefaultFont, text, Calc.Floor(position), color, 0, Vector2.Zero, 1, SpriteEffects.None, RealDepth + (_depthOffset * SB_DEPTH_DIV));
+		}	
+		public static void Text(string text, Vector2 position, Color color, Vector2 origin, Vector2 scale, float rotation, SpriteFont font = null, int _depthOffset = 0) {
+			SpriteBatch.DrawString(font??DefaultFont, text, Calc.Floor(position), color, rotation, origin, scale, SpriteEffects.None, RealDepth + (_depthOffset * SB_DEPTH_DIV));
 		}
 
 		public static void TextOutline(SpriteFont font, string text, Vector2 position, Color color, Color bgColor, float _offset = 1, int _depthOffset = 0) {

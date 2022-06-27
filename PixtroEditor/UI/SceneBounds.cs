@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Monocle;
+using Microsoft.Xna.Framework;
 
 namespace Pixtro.UI {
 	public class SceneBounds : Control {
@@ -10,12 +11,14 @@ namespace Pixtro.UI {
 		public SceneBounds(Scene scene) {
 			this.scene = scene;
 			Interactable = false;
+
+			Transform.Bounds = scene.VisualBounds;
 		}
 
 		protected internal override void Update() {
 			base.Update();
 
-			LocalBounds = scene.VisualBounds;
+			Transform.Bounds = scene.VisualBounds;
 		}
 	}
 }

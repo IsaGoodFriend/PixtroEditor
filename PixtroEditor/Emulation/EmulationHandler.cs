@@ -5,6 +5,8 @@ using System.Text;
 using Pixtro.Emulation.GBA;
 using Monocle;
 using Pixtro.Editor;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Pixtro.Emulation {
 	public static class EmulationHandler {
@@ -12,7 +14,14 @@ namespace Pixtro.Emulation {
 		private static NullController nullController = new NullController();
 		private static MGBAHawk emulator;
 		private static IController humanController;
-		private static int[] buffer;
+		//private static int[] buffer;
+
+		static Texture2D texture;
+		static RenderTarget2D bufferA;
+
+		static Effect colorFix;
+		static Dictionary<string, Effect> effects;
+
 
 		public static GameCommunicator Communication { get; private set; }
 
@@ -22,16 +31,24 @@ namespace Pixtro.Emulation {
 
 		public static bool Focused = false, PlayUnfocused = false;
 
-		private static bool softPause;
-
-		public static event Action OnScreenRedraw;
-
 		public static bool SoftPause {
-			get => softPause || (!Focused && !PlayUnfocused);
-			set => softPause = value;
+			get => ManualSoftPause || (!Focused && !PlayUnfocused);
 		}
+		public static bool ManualSoftPause;
 
 		public static bool HardPause { get; set; }
+
+		public static void InitializeGraphics() {
+			texture = new Texture2D(Draw.SpriteBatch.GraphicsDevice, 240, 160);
+			bufferA = new RenderTarget2D(Draw.SpriteBatch.GraphicsDevice, 240, 160, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+
+			colorFix = Engine.Instance.Content.Load<Effect>("Shaders/main");
+
+			effects = new Dictionary<string, Effect>();
+			effects.Add("gba_on", Engine.Instance.Content.Load<Effect>("Shaders/gba_on"));
+
+			UpdateScreen(false);
+		}
 
 		public static void SetController(IController controller) {
 			humanController = controller;
@@ -39,6 +56,7 @@ namespace Pixtro.Emulation {
 		public static void LoadGame(byte[] data) {
 			if (emulator != null)
 				emulator.Dispose();
+
 			emulator = new MGBAHawk(data);
 
 			Communication = null;
@@ -60,43 +78,60 @@ namespace Pixtro.Emulation {
 			LoadGame(File.ReadAllBytes(path));
 		}
 		public static void ClearGame() {
+			if (emulator == null)
+				return;
 			emulator.Dispose();
 			emulator = null;
 
-			if (buffer == null || buffer.Length != size) {
-				SetEmptyBuffer();
-			}
+			HardPause = false;
+			ManualSoftPause = false;
+
+			Communication = null;
+
+			UpdateScreen(false);
 		}
 
 		public static void Update() {
 
 			if (emulator == null) {
 
-				if (buffer == null || buffer.Length != size) {
-					SetEmptyBuffer();
-				}
-
 				return;
 			}
+
+			effects["gba_on"].SetParameter("time", Engine.TimeAlive);
+			effects["gba_on"].SetParameter("on", 1);
 
 			if (!HardPause) {
 
 				emulator.FrameAdvance(Focused ? humanController : nullController, true);
 
-				buffer = emulator.GetVideoBuffer();
-
-				OnScreenRedraw();
+				UpdateScreen(true);
 			}
 		}
-		public static int[] VideoBuffer() {
-			if (buffer == null || buffer.Length != size) {
-				SetEmptyBuffer();
+
+		static void UpdateScreen(bool value) {
+
+			Draw.SpriteBatch.GraphicsDevice.SetRenderTarget(bufferA);
+
+			if (value && emulator != null) {
+
+				Draw.SpriteBatch.Begin(effect: colorFix);
+
+				texture.SetData(emulator.GetVideoBuffer());
+
+				Draw.SpriteBatch.Draw(texture, new Rectangle(0, 0, 240, 160), Color.White);
+			}
+			else {
+				Draw.SpriteBatch.Begin();
+
+				Draw.SpriteBatch.Draw(Atlases.EngineGraphics["UI/empty_game"].Texture,  new Rectangle(0, 0, 240, 160), Color.White);
 			}
 
-			return buffer;
+			Draw.SpriteBatch.End();
+
+			Draw.SpriteBatch.GraphicsDevice.SetRenderTarget(null);
 		}
 
-		
 
 		public static byte[] LevelDataInGame(int levelIndex, bool aSection) {
 			var gc = GameCommunicator.Instance;
@@ -114,10 +149,5 @@ namespace Pixtro.Emulation {
 			return null;
 		}
 
-		private static void SetEmptyBuffer() {
-			buffer = new int[size];
-
-			Atlases.EngineGraphics["empty_game"].Texture.GetData(buffer);
-		}
 	}
 }

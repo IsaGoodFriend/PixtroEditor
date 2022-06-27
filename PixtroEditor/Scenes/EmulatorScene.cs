@@ -8,22 +8,10 @@ using System.Collections.Generic;
 namespace Pixtro.Scenes {
 	public class EmulatorScene : Scene {
 
-		static List<Effect> effects = new List<Effect>();
 
-		static EmulatorScene() {
-			effects.Add(Engine.Instance.Content.Load<Effect>("Shaders/main"));
-			effects.Add(Engine.Instance.Content.Load<Effect>("Shaders/gba_on"));
-		}
 
-		Texture2D texture;
+		public EmulatorScene() : base(new Image(Atlases.EngineGraphics["UI/scenes/emulator_icon"])) {
 
-		RenderTarget2D bufferA, bufferB;
-
-		public EmulatorScene() {
-			texture = new Texture2D(Draw.SpriteBatch.GraphicsDevice, 240, 160);
-			bufferA = new RenderTarget2D(Draw.SpriteBatch.GraphicsDevice, 240, 160, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
-
-			var image = new Image(new MTexture(texture));
 		}
 
 		public override void OnSetWindow(EditorLayout.LayoutWindow window) {
@@ -41,30 +29,15 @@ namespace Pixtro.Scenes {
 			EmulationHandler.Focused = true;
 		}
 
-		public override void Begin() {
-			base.Begin();
-			EmulationHandler.OnScreenRedraw += UpdateScreen;
-		}
-		public override void End() {
-			base.End();
-			EmulationHandler.OnScreenRedraw -= UpdateScreen;
-		}
+		//public override void Begin() {
+		//	base.Begin();
+		//	EmulationHandler.OnScreenRedraw += UpdateScreen;
+		//}
+		//public override void End() {
+		//	base.End();
+		//	EmulationHandler.OnScreenRedraw -= UpdateScreen;
+		//}
 
-		void UpdateScreen() {
-
-			texture.SetData(EmulationHandler.VideoBuffer());
-
-			//Draw.SpriteBatch.GraphicsDevice.Viewport = new Viewport(0, 0, 240, 160);
-			Draw.SpriteBatch.GraphicsDevice.SetRenderTarget(bufferA);
-
-			Draw.SpriteBatch.Begin(effect: effects[0]);
-
-			Draw.SpriteBatch.Draw(texture, new Rectangle(0, 0, 240, 160), Color.White);
-
-			Draw.SpriteBatch.End();
-
-			Draw.SpriteBatch.GraphicsDevice.SetRenderTarget(null);
-		}
 
 		public override void Update() {
 			base.Update();
@@ -99,14 +72,12 @@ namespace Pixtro.Scenes {
 		public override void DrawGraphics() {
 			base.DrawGraphics();
 
-			effects[1].SetParameter("time", Engine.TimeAlive);
-			effects[1].SetParameter("on", litScreen ? 1 : 0);
 
 			SceneRenderer.EndGraphics();
 			SceneRenderer.BeginGraphics(this); // effects[1]
 
 
-			Draw.SpriteBatch.Draw(bufferA, Vector2.Zero, Color.White);
+			//Draw.SpriteBatch.Draw(bufferA, Vector2.Zero, Color.White);
 		}
 	}
 }

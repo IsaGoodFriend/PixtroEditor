@@ -731,6 +731,10 @@ namespace Monocle {
 			return Math.Min(Math.Max(value, 0), 1);
 		}
 
+		public static Vector2 Clamp01(Vector2 value) {
+			return new Vector2(Clamp01(value.X), Clamp01(value.Y));
+		}
+
 		public static float YoYo(float value) {
 			if (value <= .5f)
 				return value * 2;

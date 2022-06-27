@@ -1,15 +1,84 @@
 ﻿using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Monocle;
 using Pixtro.Scenes;
 
-namespace Pixtro.Editor
-{
+namespace Pixtro.Editor {
+	public class LayoutJson {
+		public string SceneType;
+		public float? SplitFactor;
+		public bool? VerticalSplit;
+
+		public LayoutJson SceneA, SceneB;
+
+		public static LayoutJson GetLayoutData(EditorLayout.ILayoutInfo info) {
+
+			if (info is EditorLayout.LayoutSplit) {
+				var split = (EditorLayout.LayoutSplit)info;
+				var json = new LayoutJson(){
+					SplitFactor = split.SplitPercent,
+					VerticalSplit = split.Direction == EditorLayout.SplitDirection.Vertical,
+					SceneA = GetLayoutData(split.Item1),
+					SceneB = GetLayoutData(split.Item2),
+				};
+
+				return json;
+			}
+			else {
+				var window = (EditorLayout.LayoutWindow)info;
+				var json = new LayoutJson(){
+					SceneType = window.RootScene.GetType().FullName,
+				};
+
+				return json;
+			}
+		}
+		public static EditorLayout.ILayoutInfo ParseLayout(string data) {
+
+			return JsonConvert.DeserializeObject<LayoutJson>(data).GetSceneLayout();
+		}
+		public static LayoutJson ParseData(string data) {
+
+			return JsonConvert.DeserializeObject<LayoutJson>(data);
+		}
+		public static string SerializeData(LayoutJson data) {
+
+			return JsonConvert.SerializeObject(data, Formatting.Indented, new JsonSerializerSettings(){
+				NullValueHandling = NullValueHandling.Ignore,
+			});
+		}
+
+		public EditorLayout.ILayoutInfo GetSceneLayout() {
+			if (SceneType != null) {
+
+				return new EditorLayout.LayoutWindow(Type.GetType(SceneType));
+			}
+			else {
+
+				var retval = new EditorLayout.LayoutSplit();
+
+				retval.Item1 = SceneA.GetSceneLayout();
+				retval.Item2 = SceneB.GetSceneLayout();
+
+				retval.Direction = VerticalSplit.Value ? EditorLayout.SplitDirection.Vertical : EditorLayout.SplitDirection.Horizontal;
+				retval.SplitPercent = SplitFactor.Value;
+
+				return retval;
+			}
+		}
+
+		public override string ToString() {
+			return SerializeData(this);
+		}
+	}
+
 	public sealed class EditorLayout : IEnumerable<EditorLayout.LayoutWindow>
 	{
 		public static bool Resizing { get; private set; }
@@ -93,8 +162,10 @@ namespace Pixtro.Editor
 				else
 					return new Point(width, height);
 			}
-			public void ResizeWindow(Rectangle bound)
-			{
+			public void ResizeWindow(Rectangle bound) {
+				if (bound.Width <= 0)
+					return;
+
 				BoundingRect = bound;
 
 				if (Direction == SplitDirection.Vertical)
@@ -126,6 +197,8 @@ namespace Pixtro.Editor
 						rect2.Width = size2.X;
 					}
 					rect2.X = rect1.Right + SPLIT_PIXEL_SIZE;
+
+					split = (float)rect1.Width / bound.Width;
 				}
 				else
 				{
@@ -140,7 +213,10 @@ namespace Pixtro.Editor
 						rect2.Height = size2.Y;
 					}
 					rect2.Y = rect1.Bottom + SPLIT_PIXEL_SIZE;
+
+					split = (float)rect1.Height / bound.Height;
 				}
+
 
 				Item1.ResizeWindow(rect1);
 				Item2.ResizeWindow(rect2);
@@ -198,21 +274,18 @@ namespace Pixtro.Editor
 
 		private LayoutSplit adjustingLayout = null;
 
-		public EditorLayout()
-		{
-			layout = new LayoutSplit();
-			(layout as LayoutSplit).Item1 = new LayoutWindow(typeof(EmulatorScene));
-			(layout as LayoutSplit).Item2 = new LayoutWindow(typeof(MemoryPeakScene));
+		public EditorLayout(LayoutJson format) {
 
-			OnResize(1280, 720);
+			layout = format.GetSceneLayout();
 
-			SplitAt(new Point(0, 500), SplitDirection.Vertical);
-
-			var window = GetWindow(0b10);
-			window.ChangeRootScene(new ConsoleScene());
+			OnResize(Engine.ViewWidth, Engine.ViewHeight);
 
 			Engine.OnMouseDown += MouseDown;
 			Engine.ResizeEnd += OnResize;
+		}
+
+		private void SaveLayout() {
+			File.WriteAllText("layouts/default.json", LayoutJson.GetLayoutData(layout).ToString());
 		}
 
 		private void MouseDown(int x, int y) {
@@ -228,6 +301,9 @@ namespace Pixtro.Editor
 		}
 
 		private void MouseUp(int x, int y) {
+			if (Resizing) {
+				SaveLayout();
+			}
 			Engine.OnMouseDrag -= MouseDrag;
 			Resizing = false;
 		}

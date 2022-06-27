@@ -6,6 +6,7 @@ using System.Linq;
 using Microsoft.Xna.Framework.Graphics;
 using Pixtro.Editor;
 using Pixtro.UI;
+using Pixtro.Scenes;
 
 namespace Monocle {
 
@@ -31,8 +32,42 @@ namespace Monocle {
 
 		private SceneBounds uiBounds;
 		
+		Dropdown OpenDropdown() {
+			return new Dropdown(
+				("Emulator", Change),
+				("Level Editor", Change),
+				("Console", Change),
+				("Memory Viewer", Change)
+			);
+		}
 
-		public Scene() {
+		void Change(int index) {
+			Point p = EditorLayout.BoundingRect.Location;
+
+			Scene newScene;
+
+			switch (index) {
+				default:
+				case 0:
+					newScene = new EmulatorScene();
+					break;
+				case 1:
+					newScene = new LevelEditorScene();
+					break;
+				case 2:
+					newScene = new ConsoleScene();
+					break;
+				case 3:
+					newScene = new MemoryPeekScene();
+					break;
+			}
+
+			var item = Engine.Layout.GetElementAt(p + new Point(3)) as EditorLayout.LayoutWindow;
+
+			item.ChangeRootScene(newScene);
+		}
+
+		public Scene(Image buttonImage) {
 			Tracker = new Tracker();
 			Entities = new EntityList(this);
 			TagLists = new TagLists();
@@ -45,6 +80,10 @@ namespace Monocle {
 			Add(Renderer = new SceneRenderer(this));
 
 			UIFramework.AddControl(uiBounds = new SceneBounds(this));
+			var element = uiBounds.AddChild(new IconBarButton(buttonImage){
+				OnClick = OpenDropdown
+			});
+			element.Transform.Offset.Y = -EditorWindow.SUB_MENU_BAR;
 		}
 
 		public void UpdateMouse(bool sceneNew) {

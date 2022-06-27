@@ -26,9 +26,9 @@ extern unsigned int debug_engine_flags, debug_game_flags;
 #define SET_DEBUGFLAG(name)	   (debug_game_flags |= GAME_DFLAG_##name)
 #define REMOVE_DEBUGFLAG(name) (debug_game_flags &= ~GAME_DFLAG_##name)
 
-extern unsigned int debug_flags;
-
 #endif
+
+extern unsigned int debug_flags;
 
 // Enabled when the engine is loading levels async
 #define LOADING_ASYNC

@@ -99,12 +99,14 @@ unsigned int entity_physics(Entity* ent, int hit_mask) {
 					break;
 				default:
 					if (physics_code[shape - 1]) {
-						temp_offset = physics_code[shape - 1](FIXED2INT(ent->x) - BLOCK2INT(idxY), FIXED2INT(ent->y) - BLOCK2INT(idxY), ent->width, ent->height, vel, false);
+
+						temp_offset = physics_code[shape - 1](FIXED2INT(ent->x) - BLOCK2INT(idxX), FIXED2INT(ent->y) - BLOCK2INT(idxY), ent->width, ent->height, vel, false);
 
 						if (temp_offset >= 0) {
+							continue;
 							temp_offset = BLOCK2FIXED(idxX - x_is_neg) - INT2FIXED(ent->width * x_is_pos) - ent->x;
 						} else {
-							temp_offset = 0xFFFFF;
+							continue;
 						}
 					} else {
 						continue;
@@ -167,12 +169,13 @@ unsigned int entity_physics(Entity* ent, int hit_mask) {
 
 				default:
 					if (physics_code[shape - 1]) {
-						temp_offset = physics_code[shape - 1](FIXED2INT(ent->x) - BLOCK2INT(idxY), FIXED2INT(ent->y) - BLOCK2INT(idxY), ent->width, ent->height, vel, true);
+
+						temp_offset = physics_code[shape - 1](FIXED2INT(ent->x) - BLOCK2INT(idxX), FIXED2INT(ent->y) - BLOCK2INT(idxY), ent->width, ent->height, vel, true);
 
 						if (temp_offset >= 0) {
 							temp_offset = BLOCK2FIXED(idxY - y_is_neg) - INT2FIXED(ent->height * y_is_pos) - ent->y;
 						} else {
-							temp_offset = 0xFFFFF;
+							continue;
 						}
 					} else {
 						continue;

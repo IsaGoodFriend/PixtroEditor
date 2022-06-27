@@ -31,10 +31,11 @@ unsigned int game_life, levelpack_life, level_life;
 unsigned int game_freeze;
 unsigned int engine_flags;
 
+unsigned int debug_flags;
+
 #ifdef __DEBUG__
 
 unsigned int debug_engine_flags, debug_game_flags;
-unsigned int debug_flags;
 
 #define GAME_DFLAG_WAITING 0x00000001
 
@@ -256,8 +257,23 @@ void save_file() {
 	int index;
 	int index2 = SAVE_INDEX;
 
-	for (index = 0; index < SAVEFILE_LEN - 1; ++index) {
-		sram_mem[index + index2 + 1] = save_data[index];
+	int* src = &save_data[0];
+
+	for (index = 0; index < SAVEFILE_LEN; index += 4) {
+		int val = *src;
+
+		debug_flags = val;
+
+		sram_mem[index2] = val;
+		val >>= 8;
+		sram_mem[index2 + 1] = val;
+		val >>= 8;
+		sram_mem[index2 + 2] = val;
+		val >>= 8;
+		sram_mem[index2 + 3] = val;
+
+		index2 += 4;
+		src++;
 	}
 }
 void load_file() {
@@ -266,16 +282,22 @@ void load_file() {
 	int index2 = SAVE_INDEX;
 
 	if (sram_mem[index2] == 0xFF) {
-		for (index = 0; index < SAVEFILE_LEN - 1; ++index) {
-			save_data[index] = sram_mem[index + index2 + 1];
-		}
-	} else {
-		sram_mem[index2] = 0;
-
-		for (index = 0; index < SAVEFILE_LEN - 1; ++index) {
+		for (index = 0; index < SAVEFILE_LEN; index += 4) {
 			save_data[index] = 0;
 		}
 		save_file();
+	} else {
+		int* src = &save_data[0];
+		for (index = 0; index < SAVEFILE_LEN; index += 4) {
+			int val = sram_mem[index2];
+			val |= sram_mem[index2 + 1] << 8;
+			val |= sram_mem[index2 + 2] << 16;
+			val |= sram_mem[index2 + 3] << 24;
+			*src = val;
+			src++;
+
+			index2 += 4;
+		}
 	}
 }
 void open_file(int file) {

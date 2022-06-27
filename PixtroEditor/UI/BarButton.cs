@@ -5,18 +5,56 @@ using Monocle;
 using Microsoft.Xna.Framework;
 
 namespace Pixtro.UI {
-	public class BarButton : Control {
+	public class IconBarButton : BarButton {
+		private Image image;
 
-		public static string Text { get; private set; }
+		public IconBarButton(Image image) : base() {
 
-		public Func<Dropdown> CreateDropdown;
+			this.image = image;
+			Transform.Size.X = (int)image.Width;
+		}
 
-		public BarButton(string text) {
+		protected internal override void Render() {
+			base.Render();
+
+			Draw.Depth++;
+			image.Position = new Vector2(Transform.X, Transform.Y);
+			image.drawDepth = Draw.Depth;
+			image.Render();
+		}
+
+	}
+	public class TextBarButton : BarButton {
+		public string Text { get; private set; }
+
+		public TextBarButton(string text) : base() {
 
 			Text = text;
 
-			LocalBounds.Width = (int)Draw.MeasureText(text).X + 12;
-			LocalBounds.Height = Editor.EditorWindow.SUB_MENU_BAR;
+			Transform.Size.X = (int)Draw.MeasureText(text).X + 12;
+		}
+
+		protected internal override void Render() {
+			base.Render();
+
+			Draw.Depth++;
+			Draw.TextCentered(Text, new Vector2(Position.X + (Transform.Size.X / 2), Position.Y + (Transform.Size.Y / 2)), Color.White);
+		}
+	}
+	public abstract class BarButton : Control {
+
+		public Func<Dropdown> OnClick;
+		bool stayHighlighted;
+		public bool Highlighted {
+			get => UIFramework.HoveredControl == this || child != null || stayHighlighted;
+			set { stayHighlighted = value; }
+		}
+		
+		Dropdown child;
+
+		public BarButton() {
+
+			Transform.Size.Y = Editor.EditorWindow.SUB_MENU_BAR;
 
 			OnClicked += Clicked;
 		}
@@ -28,37 +66,46 @@ namespace Pixtro.UI {
 				return;
 			}
 
-			if (CreateDropdown == null)
+			if (OnClick == null)
 				return;
 
-			var dropdown = CreateDropdown();
+			child = OnClick();
 
-			dropdown.Position = new Point(Position.X, Bounds.Bottom);
+			if (child == null)
+				return;
 
-			AddChild(dropdown);
+			child.Position = new Point(0, Transform.Size.Y);
+
+			AddChild(child);
+		}
+
+		protected internal override void Update() {
+			base.Update();
+			if (!UIFramework.HasControl(child)) {
+				child = null;
+			}
 		}
 
 		protected internal override void Render() {
 
 			Color back = ColorSchemes.CurrentScheme.ButtonUnselected;
 
-			if (UIFramework.HoveredControl == this)
+			if (Highlighted)
 				back = ColorSchemes.CurrentScheme.ButtonHighlighted;
 			
 			base.Render();
-			Draw.Rect(Bounds, back);
-			var rect = Bounds;
+
+			var rect = Transform.Bounds;
+			rect.Height -= 2;
+			Draw.Rect(rect, back);
+
 			rect.X = rect.Right;
 			rect.Width = 2;
 			Draw.Rect(rect, ColorSchemes.CurrentScheme.Separation);
 
-			rect = Bounds;
-			rect.X -= 2;
-			rect.Width = 2;
+			rect.X = Transform.X - 2;
 			Draw.Rect(rect, ColorSchemes.CurrentScheme.Separation);
 
-			Draw.Depth++;
-			Draw.TextCentered(Text, new Vector2(Position.X + (LocalBounds.Width / 2), Position.Y + (LocalBounds.Height / 2)), Color.White);
 		}
 	}
 }

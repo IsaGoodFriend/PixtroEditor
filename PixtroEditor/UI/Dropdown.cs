@@ -8,19 +8,20 @@ namespace Pixtro.UI {
 	public class Dropdown : Control {
 
 		public const int BUFFER = 12;
-		public const int HEIGHT_BUFFER = 6;
+		public const int HEIGHT_BUFFER = 2;
 		public const int OPTION_SIZE = 24;
 		public const int SEPARATE_SIZE = 6;
 
-		(string text, Action action)[][] options;
+		(string text, Action<int> action)[] options;
 		Rectangle[] boundRects;
 
-		(int, int)? selectedOption;
+		int? selectedOption;
 		Rectangle highlightRect;
 
-		public Dropdown(params (string str, Action act)[] dropOptions) {
-			List<(string, Action)[]> tempList = new List<(string, Action)[]>();
-			List<(string, Action)> tempMidList = new List<(string, Action)>();
+		public Dropdown(params (string str, Action<int> act)[] dropOptions) {
+			List<(string, Action<int>)[]> tempList = new List<(string, Action<int>)[]>();
+			List<(string, Action<int>)> tempMidList = new List<(string, Action<int>)>();
+			List<(string, Action<int>)> totalList = new List<(string, Action<int>)>();
 
 			float maxSize = 0;
 
@@ -31,6 +32,7 @@ namespace Pixtro.UI {
 				}
 				else {
 					tempMidList.Add(op);
+					totalList.Add(op);
 					maxSize = Math.Max(maxSize, Draw.MeasureText(op.str).X);
 				}
 			}
@@ -46,44 +48,54 @@ namespace Pixtro.UI {
 				boundRects[i] = lastRect;
 			}
 
-			LocalBounds = new Rectangle(0, 0, (int)maxSize, lastRect.Bottom + HEIGHT_BUFFER);
+			Transform.Bounds = new Rectangle(0, 0, (int)maxSize, lastRect.Bottom + HEIGHT_BUFFER);
 
-			options = tempList.ToArray();
+			options = totalList.ToArray();
 
 			OnHover += onHover;
 			OnClicked += onClick;
 		}
 
+		public void CancelDropdown() {
+			UIFramework.RemoveControl(this);
+		}
 		private void onClick(object sender, EventArgs e) {
 
 			Point p = new Point((int)MInput.Mouse.Position.X - Position.X, (int)MInput.Mouse.Position.Y - Position.Y);
 			if (highlightRect.Contains(p)) {
-				options[selectedOption.Value.Item1][selectedOption.Value.Item2].action();
-				UIFramework.RemoveControl(this);
+				options[selectedOption.Value].action(selectedOption.Value);
+				CancelDropdown();
 			}
 		}
 
 		private void onHover(object sender, EventArgs e) {
 
-			selectedOption = FindOption();
+			var option =  FindOption();
 
-			if (selectedOption == null) {
+			if (option == null) {
 				highlightRect = Rectangle.Empty;
+				selectedOption = null;
 			}
 			else {
-				highlightRect = boundRects[selectedOption.Value.Item1];
+				selectedOption = option.Value.Item3;
+
+				highlightRect = boundRects[option.Value.Item1];
 				highlightRect.Height = OPTION_SIZE;
-				highlightRect.Y += OPTION_SIZE * selectedOption.Value.Item2;
+				highlightRect.Y += OPTION_SIZE * option.Value.Item2;
 			}
 		}
 
-		private (int, int)? FindOption() {
+		private (int, int, int)? FindOption() {
 			Point p = new Point((int)MInput.Mouse.Position.X - Position.X, (int)MInput.Mouse.Position.Y - Position.Y);
 
+			int value = 0;
 			for (int i = 0; i < boundRects.Length; ++i) {
 				if (boundRects[i].Contains(p)) {
 					p.Y -= boundRects[i].Y;
-					return (i, p.Y / OPTION_SIZE);
+					return (i, (p.Y / OPTION_SIZE), value + (p.Y / OPTION_SIZE));
+				}
+				else {
+					value += boundRects[i].Height / OPTION_SIZE;
 				}
 			}
 
@@ -101,13 +113,13 @@ namespace Pixtro.UI {
 			if (UIFramework.HoveredControl != this)
 				highlightRect = Rectangle.Empty;
 
-			if (!Bounds.Contains(p) && !Parent.Bounds.Contains(p))
-				UIFramework.RemoveControl(this);
+			if (!Transform.Bounds.Contains(p) && !Parent.Transform.Bounds.Contains(p))
+				CancelDropdown();
 		}
 
 		protected internal override void Render() {
 			base.Render();
-			var rect = Bounds;
+			var rect = Transform.Bounds;
 			Draw.Rect(rect, ColorSchemes.CurrentScheme.Separation);
 			rect.Inflate(-2, 0);
 			rect.Height -= 2;
@@ -123,16 +135,21 @@ namespace Pixtro.UI {
 
 			Vector2 position = new Vector2(Position.X + BUFFER, Position.Y + 4);
 
-			for (int i = 0; i < options.Length; ++i) {
-				for (int j = 0; j < options[i].Length; ++j) {
+			int area = 0;
+			for (int i = 0; i < options.Length;) {
+				for (int j = 0; j < boundRects[area].Height / OPTION_SIZE; ++j) {
 
-					Draw.Text(options[i][j].text, position, Color.White);
+					Draw.Text(options[i].text, position - new Vector2(0, 2), Color.White);
 					position.Y += OPTION_SIZE;
+
+					i++;
 				}
-				if (i == options.Length - 1)
+				area++;
+
+				if (i >= options.Length - 1)
 					break;
 
-				Draw.Rect(position + new Vector2(4 - BUFFER, -2), Bounds.Width - 8, 2, ColorSchemes.CurrentScheme.Separation);
+				Draw.Rect(position + new Vector2(4 - BUFFER, -2), Transform.Bounds.Width - 8, 2, ColorSchemes.CurrentScheme.Separation);
 				position.Y += SEPARATE_SIZE;
 			}
 		}

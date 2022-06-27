@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.IO;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using System.Drawing;
@@ -11,7 +12,6 @@ using DSDecmp;
 namespace Pixtro.Compiler {
 	public class VisualPackMetadata {
 		public class TileWrapping {
-			// TODO: Create feature that lets users copy mapping data from one version to another
 
 			public int Palette;
 			public string Tileset;
@@ -26,6 +26,53 @@ namespace Pixtro.Compiler {
 
 			[JsonIgnore]
 			public Dictionary<string, uint> EnableMask, DisableMask;
+
+			public Point[] GetWrapping(Func<int, int, char> checkTileset, int x, int y, int width, int height) {
+				
+				uint value = 0;
+
+				foreach (var p in Mapping) {
+					value <<= 1;
+
+					Point ex = new Point(Math.Clamp(x + p.X, 0, width - 1), Math.Clamp(y + p.Y, 0, height - 1));
+
+					if (Connections.Contains(checkTileset(ex.X, ex.Y)))
+						value |= 1;
+				}
+
+				if (MappingSpecial != null)
+					foreach (string str in MappingSpecial) {
+						Match m = Regex.Match(str, @"([0-9\-]+), *([0-9\-]+) *; *(\w+)");
+						if (!m.Success)
+							continue;
+
+						Point ex = new Point(Math.Clamp(x + int.Parse(m.Groups[1].Value), 0, width - 1), Math.Clamp(y + int.Parse(m.Groups[2].Value), 0, height - 1));
+						char val = checkTileset(ex.X, ex.Y);
+
+						value <<= 1;
+						if (m.Groups[3].Value.Contains(val)) {
+							value |= 1;
+						}
+					}
+
+				foreach (var key in TileMapping.Keys) {
+					var testValue = EnableMask[key];
+
+					if ((testValue & value) != testValue)
+						continue;
+
+					testValue = DisableMask[key];
+
+					if ((testValue & (value)) != 0)
+						continue;
+
+					return TileMapping[key];
+
+				}
+				
+				return null;
+
+			}
 
 			public void FinalizeMasks() {
 				EnableMask = new Dictionary<string, uint>();
@@ -49,6 +96,7 @@ namespace Pixtro.Compiler {
 			}
 		}
 		public Dictionary<char, TileWrapping> Wrapping;
+
 
 		[JsonIgnore]
 		public LevelBrickset fullTileset = null;
@@ -129,6 +177,9 @@ namespace Pixtro.Compiler {
 		private const int rng_value1 = 374761393, rng_value2 = 668265263, rng_value3 = 1274126177;
 
 		public static int RNGSeed;
+		public static int RandomFromPoint(int x, int y, int min, int max) {
+			return RandomFromPoint(new Point(x, y), RNGSeed, min, max);
+		}
 		public static int RandomFromPoint(Point point, int min, int max)
 		{
 			return RandomFromPoint(point, RNGSeed, min, max);
@@ -139,6 +190,131 @@ namespace Pixtro.Compiler {
 			h = h^(h >> 16);
 			return h  % (max - min) - min;
 
+		}
+
+		private static string NextLine(StreamReader _reader, bool ignoreWhitespace = true) {
+
+			string retval;
+
+			if (ignoreWhitespace) {
+				do
+					retval = _reader.ReadLine();
+				while (string.IsNullOrWhiteSpace(retval));
+			}
+			else {
+				do
+					retval = _reader.ReadLine();
+				while (string.IsNullOrEmpty(retval));
+			}
+
+			return retval;
+		}
+		private static string[] SplitWithTrim(string str, char splitChar) {
+			string[] split = str.Split(new char[]{ splitChar }, StringSplitOptions.RemoveEmptyEntries);
+
+			for (int i = 0; i < split.Length; ++i) {
+				split[i] = split[i].Trim();
+			}
+
+			return split;
+		}
+		public static CompiledLevel CompileLevelTxt(string fullPath) {
+
+			CompiledLevel retval = new CompiledLevel();
+
+			using (StreamReader reader = new StreamReader(File.Open(fullPath, FileMode.Open))) {
+				string[] split = SplitWithTrim(NextLine(reader), '-');
+
+				retval.Width = int.Parse(split[0]);
+				retval.Height = int.Parse(split[1]);
+				retval.Layers = int.Parse(split[2]);
+
+				while (!reader.EndOfStream) {
+					string dataType = NextLine(reader);
+					split = SplitWithTrim(dataType, '-');
+
+					switch (split[0]) {
+						case "layer": {
+							int layer = dataType.Contains('-') ? int.Parse(split[1]) : 0;
+
+							for (int i = 0; i < retval.Height; ++i) {
+								retval.AddLine(layer, i, NextLine(reader, false));
+							}
+							break;
+						}
+						case "entities":
+							string ent = "";
+
+							while (ent != "end") {
+								ent = NextLine(reader);
+
+								if (ent == "end")
+									break;
+
+								split = SplitWithTrim(ent, ';');
+
+								var entity = new CompiledLevel.Entity();
+
+								entity.x = int.Parse(split[1]);
+								entity.y = int.Parse(split[2]);
+
+								byte type;
+								if (!byte.TryParse(split[0], out type)) {
+									entity.type = CompiledLevel.DataParse.EntityIndex[split[0]];
+								}
+								var currentType = FullCompiler.currentType = entity.type;
+
+								for (int i = 3; i < split.Length; ++i) {
+									entity.data.Add(FullCompiler.ParseMetadata(split[i]));
+								}
+
+
+								retval.entities.Add(entity);
+
+								FullCompiler.entLocalCount++;
+								FullCompiler.entGlobalCount++;
+								FullCompiler.entSectionCount++;
+
+								if (!FullCompiler.typeLocalCount.ContainsKey(currentType))
+									FullCompiler.typeLocalCount.Add(currentType, 0);
+								if (!FullCompiler.typeGlobalCount.ContainsKey(currentType))
+									FullCompiler.typeGlobalCount.Add(currentType, 0);
+								if (!FullCompiler.typeSectionCount.ContainsKey(currentType))
+									FullCompiler.typeSectionCount.Add(currentType, 0);
+
+								FullCompiler.typeLocalCount[currentType]++;
+								FullCompiler.typeGlobalCount[currentType]++;
+								FullCompiler.typeSectionCount[currentType]++;
+
+
+							}
+							break;
+						case "meta":
+						case "metadata": {
+							retval.metadata =new Dictionary<byte, byte>();
+
+							string readLine = "";
+
+							while (readLine != "end") {
+								readLine = NextLine(reader);
+
+								if (readLine == "end")
+									break;
+
+								split = readLine.Split(';');
+
+								byte value = FullCompiler.ParseMetadata(split[1]);
+								retval.metadata.Add(byte.Parse(split[0]), value);
+
+							}
+						}
+						break;
+					}
+
+				}
+			}
+
+			return retval;
 		}
 
 		public static Random Randomizer;
@@ -153,6 +329,7 @@ namespace Pixtro.Compiler {
 
 		private int width, height, layers;
 
+		public char[,,] LevelData => levelData;
 		private char[,,] levelData;
 
 		public Dictionary<byte, byte> metadata = new Dictionary<byte, byte>();

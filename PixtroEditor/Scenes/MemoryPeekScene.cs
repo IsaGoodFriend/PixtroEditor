@@ -4,9 +4,10 @@ using System;
 using Pixtro.Emulation;
 using System.IO;
 using System.Text.RegularExpressions;
+using Pixtro.Editor;
 
 namespace Pixtro.Scenes {
-	internal class MemoryPeakScene : Scene {
+	internal class MemoryPeekScene : Scene {
 
 		const int CONSOLE_LINES = 512;
 		const int LINE_SPACE = 28;
@@ -19,7 +20,7 @@ namespace Pixtro.Scenes {
 		PhysObj testObject;
 		int[,] ground;
 
-		public MemoryPeakScene() {
+		public MemoryPeekScene() : base(new Image(Atlases.EngineGraphics["UI/scenes/memory_peek_icon"])) {
 			//Camera.Position = new Vector2(0, CONSOLE_LINES * LINE_SPACE);
 
 			ground = new int[5, 5];

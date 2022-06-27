@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 using Pixtro.Editor;
+using Newtonsoft.Json;
 
 namespace Pixtro.Projects {
 	public sealed class ProjectInfo : IDisposable {
@@ -16,6 +17,8 @@ namespace Pixtro.Projects {
 		public static bool BuildSuccess { get; private set; }
 
 		private static event Action OnSuccessfulBuild;
+
+		public Dictionary<string, Scenes.LevelPack> VisualPacks;
 
 		public static void OpenProject(string filePath) {
 			if (CurrentProject != null) {
@@ -198,6 +201,34 @@ namespace Pixtro.Projects {
 			nodes.Save(ProjectPath, "pixtro");
 
 			dirty = false;
+		}
+
+		public void LoadContent() {
+			var dictionary = JsonConvert.DeserializeObject<Dictionary<string, Pixtro.Compiler.VisualPackMetadata>>(File.ReadAllText(Path.Combine(Path.GetDirectoryName(ProjectPath), "levels", "meta_level.json")));
+
+			VisualPacks = new Dictionary<string, Scenes.LevelPack>();
+			foreach (var p in dictionary) {
+				if (p.Value.Wrapping == null)
+					continue;
+				p.Value.Name = p.Key;
+
+				foreach (char c in p.Value.Wrapping.Keys) {
+					var wrap = p.Value.Wrapping[c];
+
+					if (wrap.MappingCopy != null) {
+						string[] split = wrap.MappingCopy.Split('/', '\\');
+
+						var otherWrap = dictionary[split[0]].Wrapping[split[1][0]];
+
+						wrap.Mapping = otherWrap.Mapping;
+						wrap.TileMapping = otherWrap.TileMapping;
+					}
+
+					wrap.FinalizeMasks();
+				}
+
+				VisualPacks.Add(p.Key, new Scenes.LevelPack(p.Value));
+			}
 		}
 
 		public void Dispose() {

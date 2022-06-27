@@ -1,5 +1,6 @@
 //#define CONST
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -8,6 +9,7 @@ using System.Reflection;
 using System.Runtime;
 using Pixtro.Projects;
 using Pixtro.UI;
+using Pixtro.Scenes;
 using Pixtro.Editor;
 using Microsoft.Xna.Framework.Input;
 
@@ -73,6 +75,7 @@ namespace Monocle {
 		private Scene activeScene;
 		protected Renderer fullRenderer;
 		private bool sceneChanged = false;
+		private Rectangle previousBounds;
 
 		// util
 		public static Color ClearColor;
@@ -189,10 +192,9 @@ namespace Monocle {
 			Graphics.PreferredBackBufferHeight = 720;
 			Graphics.ApplyChanges();
 
-			
 			UpdateView();
 
-			Layout = new EditorLayout();
+			Layout = new EditorLayout(LayoutJson.ParseData(File.ReadAllText("layouts/default.json")));
 		}
 
 
@@ -200,6 +202,8 @@ namespace Monocle {
 			base.LoadContent();
 
 			Monocle.Draw.Initialize(GraphicsDevice);
+
+			previousBounds = Window.ClientBounds;
 		}
 
 		protected override void Update(GameTime gameTime) {
@@ -265,11 +269,15 @@ namespace Monocle {
 			else if (GameState != null)
 				GameState.Update();
 
+			RenderCore();
+			base.Draw(new GameTime());
+			previousBounds = Window.ClientBounds;
+
 			base.Update(gameTime);
 		}
 
 		protected override void Draw(GameTime gameTime) {
-			RenderCore();
+			//RenderCore();
 
 			base.Draw(gameTime);
 

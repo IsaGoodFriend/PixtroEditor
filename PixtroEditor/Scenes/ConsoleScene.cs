@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Monocle;
+using Pixtro.Editor;
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -7,29 +8,6 @@ using System.Text.RegularExpressions;
 namespace Pixtro.Scenes {
 	public class ConsoleScene : Scene {
 
-		static ConsoleScene() {
-			outputFile = new StreamWriter(File.Open("output.log", FileMode.Create, FileAccess.Write, FileShare.Read));
-			outputFile.AutoFlush = true;
-		}
-
-		const int CONSOLE_LINES = 512;
-		const int LINE_SPACE = 28;
-
-		static string[] ConsoleLines = new string[CONSOLE_LINES];
-		static int ConsoleIndex;
-		static StreamWriter outputFile;
-
-		float scrollOffset;
-
-		public ConsoleScene() {
-			Camera.Position = new Vector2(0, CONSOLE_LINES * LINE_SPACE);
-		}
-
-		public override void OnResize() {
-			base.OnResize();
-
-			Camera.Origin = new Vector2(0, VisualBounds.Height);
-		}
 
 		public static void Log(string text) {
 			ConsoleLines[ConsoleIndex++] = text;
@@ -53,6 +31,33 @@ namespace Pixtro.Scenes {
 				displayWarning = match.Groups[1].Value;
 
 			Log($"ERROR :: {file} {line} -- {displayWarning}");
+		}
+
+		static ConsoleScene() {
+			outputFile = new StreamWriter(File.Open("output.log", FileMode.Create, FileAccess.Write, FileShare.Read));
+			outputFile.AutoFlush = true;
+		}
+
+		const int CONSOLE_LINES = 512;
+		const int LINE_SPACE = 28;
+
+		static string[] ConsoleLines = new string[CONSOLE_LINES];
+		static int ConsoleIndex;
+		static StreamWriter outputFile;
+
+		float scrollOffset;
+
+		public ConsoleScene() : base(new Image(Atlases.EngineGraphics["UI/scenes/console_icon"])) {
+			Camera.Position = new Vector2(0, CONSOLE_LINES * LINE_SPACE);
+			Camera.Origin = new Vector2(0, VisualBounds.Height);
+
+			
+		}
+
+		public override void OnResize() {
+			base.OnResize();
+
+			Camera.Origin = new Vector2(0, VisualBounds.Height);
 		}
 
 		public override void Update() {

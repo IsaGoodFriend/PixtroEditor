@@ -100,11 +100,11 @@ namespace Pixtro.Compiler
 
 		private static string currentPack;
 
-		private static int currentType;
+		internal static int currentType;
 
-		private static int entGlobalCount, entSectionCount, entLocalCount;
+		internal static int entGlobalCount, entSectionCount, entLocalCount;
 
-		private static Dictionary<int, int> 
+		internal static Dictionary<int, int> 
 			typeGlobalCount = new Dictionary<int, int>(),
 			typeSectionCount = new Dictionary<int, int>(),
 			typeLocalCount = new Dictionary<int, int>();
@@ -531,7 +531,7 @@ namespace Pixtro.Compiler
 						case ".json":
 							throw new NotImplementedException();
 						case ".tmx":
-							compressed = CompileLevelTiled(level + ext);
+							//compressed = CompileLevelTiled(level + ext);
 							break;
 						default:
 							compressed = CompileLevelBin(level + ext);
@@ -639,39 +639,24 @@ namespace Pixtro.Compiler
 			ClearDictionaries();
 		}
 
-		private static string NextLine(StreamReader _reader, bool ignoreWhitespace = true)
-		{
+		private static CompiledLevel CompileLevelTxt(string localPath) {
+			return CompiledLevel.CompileLevelTxt(Path.Combine(Settings.ProjectPath, LevelPath, localPath));
+		}
 
-			string retval;
+		private static CompiledLevel CompileLevelTiled(string path) {
+			path = Path.Combine(Settings.ProjectPath, LevelPath, path);
 
-			if (ignoreWhitespace)
-			{
-				do
-					retval = _reader.ReadLine();
-				while (string.IsNullOrWhiteSpace(retval));
-			}
-			else
-			{
-				do
-					retval = _reader.ReadLine();
-				while (string.IsNullOrEmpty(retval));
-			}
+			CompiledLevel retval = new CompiledLevel();
+
+			XmlDocument doc = new XmlDocument();
+			doc.Load(path);
+
+
 
 			return retval;
 		}
-		private static string[] SplitWithTrim(string str, char splitChar)
-		{
-			string[] split = str.Split(new char[]{ splitChar }, StringSplitOptions.RemoveEmptyEntries);
 
-			for (int i = 0; i < split.Length; ++i)
-			{
-				split[i] = split[i].Trim();
-			}
-
-			return split;
-		}
-
-		private static byte ParseMetadata(string algorithm)
+		public static byte ParseMetadata(string algorithm)
 		{
 			byte retval;
 
@@ -718,7 +703,6 @@ namespace Pixtro.Compiler
 							pack = args[2];
 						}
 
-						// TODO: auto detect level pack if not given a third argument
 						return levelPacks[pack].IndexOf($"{pack}/{args[1]}");
 					}
 				}
@@ -839,128 +823,6 @@ namespace Pixtro.Compiler
 			}
 
 			return null;
-		}
-		private static CompiledLevel CompileLevelTxt(string levelLocalPath)
-		{
-			levelLocalPath = Path.Combine(Settings.ProjectPath, LevelPath, levelLocalPath);
-
-			CompiledLevel retval = new CompiledLevel();
-
-			using (StreamReader reader = new StreamReader(File.Open(levelLocalPath, FileMode.Open)))
-			{
-				string[] split = SplitWithTrim(NextLine(reader), '-');
-
-				retval.Width = int.Parse(split[0]);
-				retval.Height = int.Parse(split[1]);
-				retval.Layers = int.Parse(split[2]);
-
-				while (!reader.EndOfStream)
-				{
-					string dataType = NextLine(reader);
-					split = SplitWithTrim(dataType, '-');
-
-					switch (split[0])
-					{
-						case "layer":
-						{
-							int layer = dataType.Contains('-') ? int.Parse(split[1]) : 0;
-
-							for (int i = 0; i < retval.Height; ++i)
-							{
-								retval.AddLine(layer, i, NextLine(reader, false));
-							}
-							break;
-						}
-						case "entities":
-							string ent = "";
-
-							while (ent != "end")
-							{
-								ent = NextLine(reader);
-
-								if (ent == "end")
-									break;
-
-								split = SplitWithTrim(ent, ';');
-
-								var entity = new CompiledLevel.Entity();
-
-								entity.x = int.Parse(split[1]);
-								entity.y = int.Parse(split[2]);
-
-								byte type;
-								if (!byte.TryParse(split[0], out type)) {
-									entity.type = CompiledLevel.DataParse.EntityIndex[split[0]];
-								}
-								currentType = entity.type;
-
-								for (int i = 3; i < split.Length; ++i)
-								{
-									entity.data.Add(ParseMetadata(split[i]));
-								}
-
-
-								retval.entities.Add(entity);
-
-								entLocalCount++;
-								entGlobalCount++;
-								entSectionCount++;
-
-								if (!typeLocalCount.ContainsKey(currentType))
-									typeLocalCount.Add(currentType, 0);
-								if (!typeGlobalCount.ContainsKey(currentType))
-									typeGlobalCount.Add(currentType, 0);
-								if (!typeSectionCount.ContainsKey(currentType))
-									typeSectionCount.Add(currentType, 0);
-
-								typeLocalCount[currentType]++;
-								typeGlobalCount[currentType]++;
-								typeSectionCount[currentType]++;
-
-
-							}
-							break;
-						case "meta":
-						case "metadata":
-						{
-							retval.metadata =new Dictionary<byte, byte>();
-
-							string readLine = "";
-
-							while (readLine != "end")
-							{
-								readLine = NextLine(reader);
-
-								if (readLine == "end")
-									break;
-
-								split = readLine.Split(';');
-
-								byte value = ParseMetadata(split[1]);
-								retval.metadata.Add(byte.Parse(split[0]), value);
-
-							}
-						}
-						break;
-					}
-
-				}
-			}
-
-			return retval;
-		}
-		private static CompiledLevel CompileLevelTiled(string path)
-		{
-			path = Path.Combine(Settings.ProjectPath, LevelPath, path);
-
-			CompiledLevel retval = new CompiledLevel();
-
-			XmlDocument doc = new XmlDocument();
-			doc.Load(path);
-
-			
-
-			return retval;
 		}
 
 		private static void CompilePalettes(CompileToC compiler)

@@ -1,0 +1,10 @@
+{
+	"SplitFactor" : 0.5,
+	"VerticalSplit" : false,
+	"SceneA" : {
+		"SceneType" : "Pixtro.Scenes.EmulatorScene"
+	},
+	"SceneB" : {
+		"SceneType" : "Pixtro.Scenes.LevelEditorScene"
+	}
+}
