@@ -41,6 +41,8 @@ namespace Pixtro.Editor {
 			string path = Path.GetDirectoryName(Projects.ProjectInfo.CurrentProject.ProjectPath);
 			Atlases.GameSprites = Atlas.FromDirectory(Projects.ProjectInfo.CurrentProject.ProjectPath);
 
+			EmulationHandler.InitializeGraphics();
+
 			Projects.ProjectInfo.CurrentProject.LoadContent();
 
 			buttons = new BarButton[10];

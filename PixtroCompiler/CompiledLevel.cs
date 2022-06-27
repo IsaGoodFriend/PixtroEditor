@@ -21,6 +21,7 @@ namespace Pixtro.Compiler {
 			public char[] Connections;
 			public Point[] Mapping;
 			public string[] MappingSpecial;
+			public Point? Preview;
 			public Dictionary<string, Point[]> TileMapping;
 			public Dictionary<string, Point[]> Offsets;
 

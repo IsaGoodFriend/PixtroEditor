@@ -98,8 +98,10 @@ namespace Pixtro.Emulation {
 				return;
 			}
 
-			effects["gba_on"].SetParameter("time", Engine.TimeAlive);
-			effects["gba_on"].SetParameter("on", 1);
+			if (effects != null) {
+				effects["gba_on"].SetParameter("time", Engine.TimeAlive);
+				effects["gba_on"].SetParameter("on", 1);
+			}
 
 			if (!HardPause) {
 
@@ -110,6 +112,7 @@ namespace Pixtro.Emulation {
 		}
 
 		static void UpdateScreen(bool value) {
+
 
 			Draw.SpriteBatch.GraphicsDevice.SetRenderTarget(bufferA);
 
@@ -130,6 +133,11 @@ namespace Pixtro.Emulation {
 			Draw.SpriteBatch.End();
 
 			Draw.SpriteBatch.GraphicsDevice.SetRenderTarget(null);
+		}
+
+		public static void Render() {
+
+			Draw.SpriteBatch.Draw(bufferA, Vector2.Zero, Color.White);
 		}
 
 

@@ -62,7 +62,7 @@ namespace Pixtro.UI {
 						continue;
 
 					if (cnt.Transform.Bounds.Contains(mouse)) {
-						if (currentHover == null || cnt.Depth < currentHover.Depth)
+						if (currentHover == null || cnt.Depth > currentHover.Depth)
 							currentHover = cnt;
 					}
 				}

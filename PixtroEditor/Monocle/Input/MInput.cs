@@ -9,6 +9,10 @@ namespace Monocle {
 		public static MouseData Mouse { get; private set; }
 		public static GamePadData[ ] GamePads { get; private set; }
 
+		public static bool ControlsCheck => Keyboard.Check(Keys.LeftControl) || Keyboard.Check(Keys.RightControl);
+		public static bool ShiftsCheck => Keyboard.Check(Keys.LeftShift) || Keyboard.Check(Keys.RightShift);
+		public static bool AltsCheck => Keyboard.Check(Keys.LeftAlt) || Keyboard.Check(Keys.RightAlt);
+
 		internal static List<VirtualInput> VirtualInputs;
 
 		public static bool Active = true;

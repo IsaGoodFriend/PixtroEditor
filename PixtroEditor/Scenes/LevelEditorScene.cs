@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Pixtro.Editor;
 using Pixtro.Compiler;
+using Pixtro.UI;
 
 namespace Pixtro.Scenes {
 	public enum LevelEditorStates {
@@ -54,6 +55,8 @@ namespace Pixtro.Scenes {
 			}
 
 			updateOffsets = offsets.ToArray();
+			
+			
 		}
 
 		public MTexture GetTile(int x, int y, VirtualMap<char> tiles) {
@@ -69,6 +72,22 @@ namespace Pixtro.Scenes {
 				return null;
 
 			var point = points[CompiledLevel.RandomFromPoint(x, y, 0, points.Length)];
+
+			return tileset[point.X, point.Y];
+		}
+		public MTexture GetTile(int x, int y, int width, int height, Func<int, int, char> getTile) {
+
+			var value = getTile(x, y);
+			var tileset = Tilesets[value];
+			if (tileset == null)
+				return null;
+
+			var points = VisualData.Wrapping[value].GetWrapping(getTile, x, y, width, height);
+
+			if (points == null)
+				return null;
+
+			var point = points[0];
 
 			return tileset[point.X, point.Y];
 		}
@@ -92,17 +111,23 @@ namespace Pixtro.Scenes {
 				tiles = new VirtualMap<char>(data);
 			}
 		}
-		public class EntityLayer {
-			public class Entity {
+		public class Entity {
 
-				public string entType;
+			public string entType;
 
-				public int X, Y;
+			public int X, Y;
 
-				public List<string> metaData;
+			public List<string> metaData;
+
+			public Entity(string[] data) {
+				metaData = new List<string>();
+				entType = data[0];
+				X = int.Parse(data[1]);
+				Y = int.Parse(data[2]);
+				for (int i = 3; i < data.Length; ++i) {
+					metaData.Add(data[i]);
+				}
 			}
-
-			public List<Entity> entities;
 		}
 
 		private LevelSaveType saveType;
@@ -110,7 +135,7 @@ namespace Pixtro.Scenes {
 
 		public Dictionary<int, string> metaData;
 		public List<TileLayer> tileMaps;
-		public EntityLayer entities;
+		public List<Entity> entities;
 
 		public int Width { get; private set; }
 		public int Height { get; private set; }
@@ -120,13 +145,15 @@ namespace Pixtro.Scenes {
 
 			metaData = new Dictionary<int, string>();
 			tileMaps = new List<TileLayer>();
-			entities = new EntityLayer();
+			entities = new List<Entity>();
 
-			CompiledLevel level;
+			path = Path.Combine(Path.GetDirectoryName(Projects.ProjectInfo.CurrentProject.ProjectPath), "levels", path);
 
 			switch (ext) {
 				case ".txt":
 					saveType = LevelSaveType.TextFile;
+
+					savePath = path;
 
 					using (StreamReader reader = new StreamReader(File.OpenRead(path))) {
 						string readNextSafe() {
@@ -134,45 +161,66 @@ namespace Pixtro.Scenes {
 							do {
 								l = reader.ReadLine();
 							}
-							while (string.IsNullOrWhiteSpace(l));
+							while (!reader.EndOfStream && string.IsNullOrWhiteSpace(l));
 
 							return l;
 						}
 
-						string value = reader.ReadLine();
-						Match match = Regex.Match(value, @"(\d+) *- *(\d+) *- *(\d+)");
+						string line = reader.ReadLine();
+						Match match = Regex.Match(line, @"(\d+)\s*-\s*(\d+)\s*-\s*(\d+)");
 						Width = int.Parse(match.Groups[1].Value);
 						Height = int.Parse(match.Groups[2].Value);
 
 						int layerCount = int.Parse(match.Groups[3].Value);
-						while (!reader.EndOfStream) {
 
+						while (!reader.EndOfStream) {
+							match = Regex.Match(readNextSafe(), @"(\w+)(?:\s*-\s*(\d))*");
+							line = match.Groups[1].Value;
+							if (line == null)
+								break;
+							switch (line) {
+								case "meta":
+
+									while ((line = readNextSafe()) != "end") {
+
+										match = Regex.Match(line, @"(\d+)\s*;\s*(.+)\s*");
+
+										metaData.Add(int.Parse(match.Groups[1].Value), match.Groups[2].Value);
+									}
+
+									break;
+								case "layer":
+									int layerIndex = int.Parse(match.Groups[2].Value);
+									while (tileMaps.Count < layerIndex + 1)
+										tileMaps.Add(null);
+
+									char[,] array = new char[Width, Height];
+
+									for (int y = 0; y < Height; ++y) {
+										line = reader.ReadLine();
+										for (int x = 0; x < Width; ++x) {
+											array[x, y] = line[x];
+										}
+									}
+
+									tileMaps[layerIndex] = new TileLayer(array);
+
+									break;
+								case "entities":
+									while ((line = readNextSafe()) != "end") {
+										string[] split = line.Split(';');
+
+										entities.Add(new Entity(split));
+									}
+									break;
+							}
 						}
 					}
-
-					level = CompiledLevel.CompileLevelTxt(path);
 
 					break;
 				
 				default:
 					throw new Exception();
-			}
-
-			Width = level.Width;
-			Height = level.Height;
-
-			foreach (var item in level.metadata) {
-
-			}
-
-			for (int i = 0; i < level.Layers; ++i) {
-				char[,] layer = new char[Width, Height];
-
-				for (int y = 0; y < Height; ++y)
-					for (int x = 0; x < Width; ++x)
-						layer[x, y] = level.LevelData[i, x, y];
-
-				tileMaps.Add(new TileLayer(layer));
 			}
 		}
 		public LevelContainer(LevelSaveType saveType, int width, int height, int layerCount) {
@@ -184,7 +232,7 @@ namespace Pixtro.Scenes {
 			for (int i = 0; i < layerCount; ++i)
 				tileMaps.Add(new TileLayer(width, height));
 
-			entities = new EntityLayer();
+			entities = new List<Entity>();
 
 			Width = width;
 			Height = height;
@@ -220,7 +268,7 @@ namespace Pixtro.Scenes {
 									sb.Append(map.tiles[x, y]);
 								}
 
-								sw.Write(sb.ToString());
+								sw.WriteLine(sb.ToString());
 							}
 
 							sw.WriteLine("end");
@@ -228,7 +276,7 @@ namespace Pixtro.Scenes {
 
 						sw.WriteLine("entities");
 
-						foreach (var ent in entities.entities) {
+						foreach (var ent in entities) {
 							sw.Write($"{ent.entType};{ent.X};{ent.Y}");
 
 							foreach (var m in ent.metaData) {
@@ -239,6 +287,7 @@ namespace Pixtro.Scenes {
 
 						sw.WriteLine("end");
 
+						sw.Flush();
 						break;
 					}
 					
@@ -272,7 +321,6 @@ namespace Pixtro.Scenes {
 
 		private const int ZOOM_START = 2;
 		private const int TileSize = 8;
-		private const int tempCountW = 30, tempCountH = 20;
 
 		private LevelEditorStates baseState, heldState;
 
@@ -281,16 +329,21 @@ namespace Pixtro.Scenes {
 		private int zoomIndex;
 		private char brushValue;
 
+		private int brushIndex;
+		public int BrushIndex {
+			get => brushIndex - 1;
+			set {
+				brushIndex = Math.Clamp(value + 1, 1, VisualData.CharIndex.Count - 1);
+				brushValue = VisualData.CharIndex[brushIndex];
+			}
+		}
+
 		public LevelContainer MainLevel { get; private set; }
 		public LevelPack VisualData { get; private set; }
 
 		public LevelEditorScene() : base(new Image(Atlases.EngineGraphics["UI/scenes/level_editor_icon"])) {
 			Camera.Zoom = ZOOM_START;
 			zoomIndex = Array.IndexOf(ZOOM_LEVELS, ZOOM_START);
-
-			rawTilemap = new VirtualMap<char>(tempCountW, tempCountH, ' ');
-
-			HelperEntity.Add(visualGrid = new TileGrid(TileSize, TileSize, tempCountW, tempCountH));
 
 			baseState = LevelEditorStates.Draw;
 
@@ -299,7 +352,19 @@ namespace Pixtro.Scenes {
 
 			VisualData = Projects.ProjectInfo.CurrentProject.VisualPacks["Prologue"];
 
-			brushValue = 'M';
+			MainLevel = new LevelContainer("prologue/lvl1.txt");
+			rawTilemap = MainLevel.tileMaps[0].tiles;
+			HelperEntity.Add(visualGrid = new TileGrid(TileSize, TileSize, MainLevel.Width, MainLevel.Height));
+			SettleAllTiles();
+
+			var item = UIBounds.AddChild(new TilesetPalette(this)) as TilesetPalette;
+
+			item.UpdateTo(VisualData);
+
+			brushValue = VisualData.CharIndex[1];
+			brushIndex = 1;
+
+			
 		}
 
 		public void Extend(int left, int right, int up, int down) {
@@ -437,6 +502,14 @@ namespace Pixtro.Scenes {
 			}
 			points.Clear();
 		}
+		private void SettleAllTiles() {
+
+			for (int x = 0; x < MainLevel.Width; ++x)
+				for (int y = 0; y < MainLevel.Height; ++y)
+					visualGrid.Tiles[x, y] = VisualData.GetTile(x, y, rawTilemap);
+
+			points.Clear();
+		}
 		public void SetTile(int x, int y, char value) {
 			SetTileLocal(x, y, value);
 			SettleTiles();
@@ -501,22 +574,25 @@ namespace Pixtro.Scenes {
 			if (MInput.Keyboard.Pressed(Keys.E)) {
 				baseState = LevelEditorStates.Erase;
 			}
+			if (MInput.ControlsCheck && MInput.Keyboard.Pressed(Keys.S)) {
+				MainLevel.Save();
+			}
 
 			if (MInput.Keyboard.Pressed(Keys.D1)) {
 				baseState = LevelEditorStates.Draw;
-				brushValue = 'M';
+				BrushIndex = 0;
 			}
 			else if (MInput.Keyboard.Pressed(Keys.D2)) {
 				baseState = LevelEditorStates.Draw;
-				brushValue = 'O';
+				BrushIndex = 1;
 			}
 			else if (MInput.Keyboard.Pressed(Keys.D3)) {
 				baseState = LevelEditorStates.Draw;
-				brushValue = '-';
+				BrushIndex = 2;
 			}
 			else if (MInput.Keyboard.Pressed(Keys.D4)) {
 				baseState = LevelEditorStates.Draw;
-				brushValue = 'N';
+				BrushIndex = 3;
 			}
 		}
 

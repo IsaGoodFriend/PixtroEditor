@@ -269,15 +269,11 @@ namespace Monocle {
 			else if (GameState != null)
 				GameState.Update();
 
-			RenderCore();
-			base.Draw(new GameTime());
-			previousBounds = Window.ClientBounds;
-
 			base.Update(gameTime);
 		}
 
 		protected override void Draw(GameTime gameTime) {
-			//RenderCore();
+			RenderCore();
 
 			base.Draw(gameTime);
 

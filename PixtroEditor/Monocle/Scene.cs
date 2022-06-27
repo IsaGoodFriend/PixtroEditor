@@ -30,7 +30,7 @@ namespace Monocle {
 
 		public event Action<int, int, bool> OnMouseDown, OnMouseDrag, OnMouseUp;
 
-		private SceneBounds uiBounds;
+		public SceneBounds UIBounds { get; private set; }
 		
 		Dropdown OpenDropdown() {
 			return new Dropdown(
@@ -79,8 +79,8 @@ namespace Monocle {
 
 			Add(Renderer = new SceneRenderer(this));
 
-			UIFramework.AddControl(uiBounds = new SceneBounds(this));
-			var element = uiBounds.AddChild(new IconBarButton(buttonImage){
+			UIFramework.AddControl(UIBounds = new SceneBounds(this));
+			var element = UIBounds.AddChild(new IconBarButton(buttonImage){
 				OnClick = OpenDropdown
 			});
 			element.Transform.Offset.Y = -EditorWindow.SUB_MENU_BAR;
@@ -110,7 +110,7 @@ namespace Monocle {
 			foreach (var entity in Entities)
 				entity.SceneEnd(this);
 
-			UIFramework.RemoveControl(uiBounds);
+			UIFramework.RemoveControl(UIBounds);
 		}
 
 		public virtual void BeforeUpdate() {
@@ -120,6 +120,8 @@ namespace Monocle {
 
 			if (!Paused)
 				Entities.BeforeUpdate();
+
+			UIBounds.Transform.Bounds = VisualBounds;
 		}
 
 		public virtual void Update() {

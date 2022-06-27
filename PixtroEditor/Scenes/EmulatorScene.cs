@@ -72,10 +72,7 @@ namespace Pixtro.Scenes {
 		public override void DrawGraphics() {
 			base.DrawGraphics();
 
-
-			SceneRenderer.EndGraphics();
-			SceneRenderer.BeginGraphics(this); // effects[1]
-
+			EmulationHandler.Render();
 
 			//Draw.SpriteBatch.Draw(bufferA, Vector2.Zero, Color.White);
 		}
