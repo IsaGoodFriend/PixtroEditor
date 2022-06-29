@@ -54,14 +54,14 @@ namespace Pixtro.UI {
 		}
 
 		public void UpdateTo(LevelPack metadata) {
-			int count = metadata.CharIndex.Count - 1;
+			int count = metadata.CharIndex.Count;
 			images = new Image[count];
 			Transform.Size = new Point(bufferSize, bufferSize * images.Length);
 
 			for (int i = 0; i < count; i++) {
-				char c = metadata.CharIndex[i + 1];
+				char c = metadata.CharIndex[i];
 
-				images[i] = new Image(metadata.Previews[c]);				
+				images[i] = new Image(i == 0 ? null : metadata.Previews[c]);				
 			}
 		}
 

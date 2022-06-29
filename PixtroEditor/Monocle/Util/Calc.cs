@@ -849,6 +849,41 @@ namespace Monocle {
 			return lineA + v * t;
 		}
 
+		public static float ToZero(float value) {
+			if (value < 0)
+				return (float)Math.Ceiling(value);
+			else
+				return (float)Math.Floor(value);
+		}
+		public static float Round(float value, MidpointRounding rounding = MidpointRounding.ToPositiveInfinity) {
+
+			if ((int)value == value) {
+				return value;
+			}
+			else if ((int)(value * 2) == value * 2) {
+				switch (rounding) {
+					default:
+					case MidpointRounding.ToPositiveInfinity:
+						return value + 0.5f;
+					case MidpointRounding.ToNegativeInfinity:
+						return value - 0.5f;
+					case MidpointRounding.AwayFromZero:
+					case MidpointRounding.ToEven:
+						return (float)Math.Round(value, rounding);
+					case MidpointRounding.ToZero:
+						if (value > 0)
+							return value - 0.5f;
+						else
+							return value + 0.5f;
+				}
+			}
+			else {
+				return (float)Math.Round(value);
+			}
+
+		}
+
+
 		public static Vector2 Round(this Vector2 vec) {
 			return new Vector2((float)Math.Round(vec.X), (float)Math.Round(vec.Y));
 		}

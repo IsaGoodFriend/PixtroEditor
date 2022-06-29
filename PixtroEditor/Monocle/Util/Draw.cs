@@ -351,37 +351,37 @@ namespace Monocle {
 
 			SpriteBatch.Draw(Pixel.Texture, rect, Pixel.ClipRect, color, 0, Vector2.Zero, SpriteEffects.None, RealDepth);
 		}
-		public static void HollowRect(float x, float y, float width, float height, Color color, int _depthOffset) {
+		public static void HollowRect(float x, float y, float width, float height, Color color, int size = 1, int _depthOffset = 0) {
 			float d = RealDepth + (_depthOffset * SB_DEPTH_DIV);
 
 			rect.X = (int)x;
 			rect.Y = (int)y;
 			rect.Width = (int)width;
-			rect.Height = 1;
+			rect.Height = size;
 
 			SpriteBatch.Draw(Pixel.Texture, rect, Pixel.ClipRect, color, 0, Vector2.Zero, SpriteEffects.None, d);
 
-			rect.Y += (int)height - 1;
+			rect.Y += (int)height - size;
 
 			SpriteBatch.Draw(Pixel.Texture, rect, Pixel.ClipRect, color, 0, Vector2.Zero, SpriteEffects.None, d);
 
-			rect.Y -= (int)height - 1;
-			rect.Width = 1;
+			rect.Y -= (int)height - size;
+			rect.Width = size;
 			rect.Height = (int)height;
 
 			SpriteBatch.Draw(Pixel.Texture, rect, Pixel.ClipRect, color, 0, Vector2.Zero, SpriteEffects.None, d);
 
-			rect.X += (int)width - 1;
+			rect.X += (int)width - size;
 
 			SpriteBatch.Draw(Pixel.Texture, rect, Pixel.ClipRect, color, 0, Vector2.Zero, SpriteEffects.None, d);
 		}
 
-		public static void HollowRect(Vector2 position, float width, float height, Color color, int _depthOffset = 0) {
-			HollowRect(position.X, position.Y, width, height, color, _depthOffset);
+		public static void HollowRect(Vector2 position, float width, float height, Color color, int size = 1, int _depthOffset = 0) {
+			HollowRect(position.X, position.Y, width, height, color, size, _depthOffset);
 		}
 
-		public static void HollowRect(Rectangle rect, Color color, int _depthOffset = 0) {
-			HollowRect(rect.X, rect.Y, rect.Width, rect.Height, color, _depthOffset);
+		public static void HollowRect(Rectangle rect, Color color, int size = 1, int _depthOffset = 0) {
+			HollowRect(rect.X, rect.Y, rect.Width, rect.Height, color, size, _depthOffset);
 		}
 
 		#endregion

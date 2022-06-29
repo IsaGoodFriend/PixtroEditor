@@ -10,14 +10,19 @@ using Microsoft.Xna.Framework.Input;
 using Pixtro.Editor;
 using Pixtro.Compiler;
 using Pixtro.UI;
+using System.Linq;
 
 namespace Pixtro.Scenes {
 	public enum LevelEditorStates {
 		None,
+		Switch,
+		Eyedrop,
 		Draw,
-		Erase,
 		Rectangle,
 		Pan,
+		Resize,
+		MoveEntity,
+		Cancel,
 	}
 	public class LevelPack {
 		public readonly Point[] updateOffsets;
@@ -128,22 +133,29 @@ namespace Pixtro.Scenes {
 				tiles = new VirtualMap<char>(width, height, empty);
 			}
 			public TileLayer(char[,] data) {
-				tiles = new VirtualMap<char>(data);
+				tiles = new VirtualMap<char>(data, ' ');
 			}
 		}
 		public class Entity {
 
+			public Rectangle bounds => new Rectangle((X + Offset.X) * LevelEditorScene.TileSize, (Y + Offset.Y) * LevelEditorScene.TileSize, Width * LevelEditorScene.TileSize, Height * LevelEditorScene.TileSize);
+
 			public string entType;
 
-			public int X, Y;
+			public int X, Y, Width, Height;
+			public Point RenderOffset, Offset;
 
 			public List<string> metaData;
+
+			public Image sprite;
 
 			public Entity(string[] data) {
 				metaData = new List<string>();
 				entType = data[0];
 				X = int.Parse(data[1]);
 				Y = int.Parse(data[2]);
+				Width = 1;
+				Height = 1;
 				for (int i = 3; i < data.Length; ++i) {
 					metaData.Add(data[i]);
 				}
@@ -160,14 +172,14 @@ namespace Pixtro.Scenes {
 		public int Width { get; private set; }
 		public int Height { get; private set; }
 
-		public LevelContainer(string path) {
+		public LevelContainer(string path, VisualPackMetadata meta) {
 			string ext = Path.GetExtension(path);
 
 			metaData = new Dictionary<int, string>();
 			tileMaps = new List<TileLayer>();
 			entities = new List<Entity>();
 
-			path = Path.Combine(Path.GetDirectoryName(Projects.ProjectInfo.CurrentProject.ProjectPath), "levels", path);
+			path = Path.Combine(Projects.ProjectInfo.CurrentProject.ProjectDirectory, "levels", path);
 
 			switch (ext) {
 				case ".txt":
@@ -230,7 +242,23 @@ namespace Pixtro.Scenes {
 									while ((line = readNextSafe()) != "end") {
 										string[] split = line.Split(';');
 
-										entities.Add(new Entity(split));
+										var ent = new Entity(split);
+										entities.Add(ent);
+
+										int index;
+										if (!int.TryParse(ent.entType, out index)) {
+											index = meta.EntityIndex[ent.entType];
+										}
+										if (meta.EntitySprites.ContainsKey(index)) {
+
+											var data = meta.EntitySprites[index];
+
+											ent.sprite = new Image(Atlases.GameSprites[$"{data.Sprite}"]);
+											ent.Width = data.Width;
+											ent.Height = data.Height;
+											ent.RenderOffset = new Point(data.RenderOffset.X, data.RenderOffset.Y);
+											ent.Offset = new Point(data.Offset.X, data.Offset.Y);
+										}
 									}
 									break;
 							}
@@ -257,6 +285,16 @@ namespace Pixtro.Scenes {
 			Width = width;
 			Height = height;
 
+		}
+
+		public void Extend(int left, int right, int up, int down) {
+			Width += left + right;
+			Height += up + down;
+
+			foreach (var ent in entities) {
+				ent.X += left;
+				ent.Y += up;
+			}
 		}
 
 		private void Save(LevelSaveType saveType) {
@@ -340,21 +378,48 @@ namespace Pixtro.Scenes {
 		//public static LevelContainer CurrentLevel { get; private set; }
 
 		private const int ZOOM_START = 2;
-		private const int TileSize = 8;
+		public const int TileSize = 8;
 
-		private LevelEditorStates baseState, heldState;
+		private LevelEditorStates baseState, dragState;
 
-		private VirtualMap<char> rawTilemap;
-		private TileGrid visualGrid;
+		private VirtualMap<char> currentLayer;
+		private VirtualMap<char>[] editingGrids;
+		private TileGrid[] visualGrids;
+		private TileGrid currentVisuals;
+		private int layerIndex;
 		private int zoomIndex;
 		private char brushValue;
-
 		private int brushIndex;
+		private bool erasing => brushIndex == 0;
+
+		private LevelContainer.Entity selectedEntity;
+
+		private TilesetPalette palette;
+
+		private Vector2 mouseDownPosition;
+		private Point resizeDirection;
+
 		public int BrushIndex {
-			get => brushIndex - 1;
+			get => brushIndex;
 			set {
-				brushIndex = Math.Clamp(value + 1, 1, VisualData.CharIndex.Count - 1);
-				brushValue = VisualData.CharIndex[brushIndex];
+				brushIndex = Math.Clamp(value, 0, VisualData.CharIndex.Count - 1);
+				if (brushIndex == 0) {
+				}
+				else {
+					brushValue = VisualData.CharIndex[brushIndex];
+				}
+			}
+		}
+		public char BrushValue {
+			get => brushValue;
+			set {
+				if (value == ' ') {
+					brushIndex = 0;
+				}
+				else {
+					brushIndex = VisualData.CharIndex.IndexOf(value);
+					brushValue = value;
+				}
 			}
 		}
 
@@ -370,49 +435,142 @@ namespace Pixtro.Scenes {
 			OnMouseDown += MouseDown;
 			OnMouseUp += MouseUp;
 
-			VisualData = Projects.ProjectInfo.CurrentProject.VisualPacks["Prologue"];
 
-			MainLevel = new LevelContainer("prologue/lvl1s.txt");
-			rawTilemap = MainLevel.tileMaps[0].tiles;
-			HelperEntity.Add(visualGrid = new TileGrid(TileSize, TileSize, MainLevel.Width, MainLevel.Height));
-			SettleAllTiles();
+			palette = UIBounds.AddChild(new TilesetPalette(this)) as TilesetPalette;
 
-			var item = UIBounds.AddChild(new TilesetPalette(this)) as TilesetPalette;
-			item.UpdateTo(VisualData);
+			LoadLevel("prologue/lvl1s.txt");
 
-			UIBounds.AddChild(new IconBarButton(new Image(Atlases.EngineGraphics["UI/folder"])) {
-				OnClick = () => {
+			//UIBounds.AddChild(new IconBarButton(new Image(Atlases.EngineGraphics["UI/folder"])) {
+			//	OnClick = () => {
 
-					var task = new Task(OpenNew);
-					task.Wait();
+			//		var task = new Task(OpenNew);
+			//		task.Wait();
 
-					return null;
-				}
-			});
-
-			brushValue = VisualData.CharIndex[1];
-			brushIndex = 1;
+			//		return null;
+			//	}
+			//});
 
 
+
+		}
+
+		public void LoadLevel(string file) {
+			var visual = Projects.ProjectInfo.CurrentProject.GetPack(file);
+
+			if (visual == null)
+				return;
+
+			VisualData = visual;
+
+			while (HelperEntity.Get<TileGrid>() != null) {
+				HelperEntity.Remove(HelperEntity.Get<TileGrid>());
+			}
+
+			MainLevel = new LevelContainer(file, visual.VisualData);
+
+			LoadTilesets();
+			palette.UpdateTo(VisualData);
+
+			BrushValue = VisualData.CharIndex[1];
 		}
 		private void OpenNew() {
 			
 		}
 
-		public void Extend(int left, int right, int up, int down) {
-			Camera.Position -= new Vector2(left * TileSize, up * TileSize);
+		private void LoadTilesets() {
+			visualGrids = new TileGrid[MainLevel.tileMaps.Count];
+			editingGrids = new VirtualMap<char>[MainLevel.tileMaps.Count];
 
-			int TilesX = rawTilemap.Columns,
-				TilesY = rawTilemap.Rows;
+			for (int i = 0; i < visualGrids.Length; ++i) {
+
+				currentLayer = MainLevel.tileMaps[i].tiles;
+				editingGrids[i] = currentLayer;
+
+				HelperEntity.Add(visualGrids[i] = new TileGrid(TileSize, TileSize, MainLevel.Width, MainLevel.Height));
+				currentVisuals = visualGrids[i];
+
+				currentVisuals.Color = Color.White * 0.4f;
+
+				currentVisuals.Depth = -i * 10;
+
+
+				SettleAllTiles();
+			}
+
+			SwitchToLayer(0);
+
+		}
+		public void SwitchToLayer(int layer) {
+
+			currentVisuals.Color = Color.White * 0.4f;
+
+			currentLayer = MainLevel.tileMaps[layer].tiles;
+			currentVisuals = visualGrids[layer];
+
+			currentVisuals.Color = Color.White;
+
+			layerIndex = layer;
+		}
+
+		public void Extend(int left, int right, int up, int down) {
+
+			int index = layerIndex;
+
+			MainLevel.Extend(left, right, up, down);
+
+			for (int i = 0; i < visualGrids.Length; ++i) {
+				Extend(i, left, right, up, down);
+
+				if (left > 0) {
+					for (int x = 0; x < left; ++x)
+						for (int y = 0; y < MainLevel.Height; y++)
+							SetTileLocal(x, y, currentLayer[x, y]);
+
+					SettleTiles();
+				}
+				if (right > 0) {
+					for (int x = MainLevel.Width - right; x < MainLevel.Width; ++x)
+						for (int y = 0; y < MainLevel.Height; y++)
+							SetTileLocal(x, y, currentLayer[x, y]);
+
+					SettleTiles();
+				}
+				if (up > 0) {
+					for (int y = 0; y < up; ++y)
+						for (int x = 0; x < MainLevel.Width; x++)
+							SetTileLocal(x, y, currentLayer[x, y]);
+
+					SettleTiles();
+				}
+				if (down > 0) {
+					for (int y = MainLevel.Height - down; y < MainLevel.Height; ++y)
+						for (int x = 0; x < MainLevel.Width; x++)
+							SetTileLocal(x, y, currentLayer[x, y]);
+
+					SettleTiles();
+				}
+				//SettleAllTiles();
+			}
+
+			Camera.Position += new Vector2(left * TileSize, up * TileSize);
+
+			SwitchToLayer(index);
+
+		}
+		private void Extend(int layer, int left, int right, int up, int down) {
+
+			SwitchToLayer(layer);
+
+			int TilesX = currentLayer.Columns,
+				TilesY = currentLayer.Rows;
 
 			int newWidth = TilesX + left + right;
 			int newHeight = TilesY + up + down;
 			if (newWidth <= 0 || newHeight <= 0) {
-				rawTilemap = new VirtualMap<char>(0, 0);
-				return;
+				throw new Exception();
 			}
 
-			var newTiles = new VirtualMap<char>(newWidth, newHeight);
+			var newTiles = new VirtualMap<char>(newWidth, newHeight, ' ');
 
 			//Center
 			for (int x = 0; x < TilesX; x++) {
@@ -421,73 +579,188 @@ namespace Pixtro.Scenes {
 					int atY = y + up;
 
 					if (atX >= 0 && atX < newWidth && atY >= 0 && atY < newHeight)
-						newTiles[atX, atY] = rawTilemap[x, y];
+						newTiles[atX, atY] = currentLayer[x, y];
 				}
 			}
 
 			//Left
 			for (int x = 0; x < left; x++)
 				for (int y = 0; y < newHeight; y++)
-					newTiles[x, y] = rawTilemap[0, Calc.Clamp(y - up, 0, TilesY - 1)];
+					newTiles[x, y] = currentLayer[0, Calc.Clamp(y - up, 0, TilesY - 1)];
 
 			//Right
 			for (int x = newWidth - right; x < newWidth; x++)
 				for (int y = 0; y < newHeight; y++)
-					newTiles[x, y] = rawTilemap[TilesX - 1, Calc.Clamp(y - up, 0, TilesY - 1)];
+					newTiles[x, y] = currentLayer[TilesX - 1, Calc.Clamp(y - up, 0, TilesY - 1)];
 
 			//Top
 			for (int y = 0; y < up; y++)
 				for (int x = 0; x < newWidth; x++)
-					newTiles[x, y] = rawTilemap[Calc.Clamp(x - left, 0, TilesX - 1), 0];
+					newTiles[x, y] = currentLayer[Calc.Clamp(x - left, 0, TilesX - 1), 0];
 
 			//Bottom
 			for (int y = newHeight - down; y < newHeight; y++)
 				for (int x = 0; x < newWidth; x++)
-					newTiles[x, y] = rawTilemap[Calc.Clamp(x - left, 0, TilesX - 1), TilesY - 1];
+					newTiles[x, y] = currentLayer[Calc.Clamp(x - left, 0, TilesX - 1), TilesY - 1];
 
-			rawTilemap = newTiles;
+			MainLevel.tileMaps[layer].tiles = newTiles;
+			currentLayer = newTiles;
 
-			visualGrid.Extend(left, right, up, down);
-			visualGrid.Position = Vector2.Zero;
+			currentVisuals.Extend(left, right, up, down);
+			currentVisuals.Position = Vector2.Zero;
 		}
 
 		private void MouseDown(int x, int y, bool newScene) {
+			if (UIFramework.HoveredControl != null) {
+				dragState = LevelEditorStates.Cancel;
+				return;
+			}
+
 			if (MInput.Keyboard.Check(Keys.Space)) {
-				heldState = LevelEditorStates.Pan;
+				dragState = LevelEditorStates.Pan;
 				OnMouseDrag += MouseDragged;
 				return;
 			}
 			if (newScene)
 				return;
 
+			Rectangle bounds = new Rectangle(0, 0, MainLevel.Width * TileSize, MainLevel.Height * TileSize);
+			Vector2 canvasPosition = WindowToCanvas(new Vector2(x, y));
+
+			mouseDownPosition = canvasPosition;
+
+			if (!bounds.Contains((int)canvasPosition.X, (int)canvasPosition.Y) && !MInput.ShiftsCheck) {
+
+				bounds.Inflate(20, 20);
+
+				if (bounds.Contains((int)canvasPosition.X, (int)canvasPosition.Y)) {
+
+					dragState = LevelEditorStates.Resize;
+					resizeDirection = Point.Zero;
+
+					if (canvasPosition.X < 0)
+						resizeDirection.X = -1;
+					else if (canvasPosition.X > MainLevel.Width * TileSize)
+						resizeDirection.X = 1;
+					if (canvasPosition.Y < 0)
+						resizeDirection.Y = -1;
+					else if (canvasPosition.Y > MainLevel.Height * TileSize)
+						resizeDirection.Y = 1;
+
+					OnMouseDrag += MouseDragged;
+				}
+
+
+				return;
+			}
+
+
+
 			OnMouseDrag += MouseDragged;
 
-
 			var state = baseState;
-			if (heldState != LevelEditorStates.None) {
-				state = heldState;
+
+			LevelContainer.Entity entity = null;
+			bool reselect = false;
+
+			foreach (var ent in MainLevel.entities) {
+				if (ent.bounds.Contains((int)canvasPosition.X, (int)canvasPosition.Y)) {
+					if (ent == selectedEntity) {
+						reselect = true;
+					}
+					if (entity != null && !reselect) 
+						continue;
+					entity = ent;
+				}
+			}
+
+			selectedEntity = entity;
+
+			if (entity != null) {
+
+				resizeDirection = new Point(entity.X, entity.Y);
+				dragState = LevelEditorStates.MoveEntity;
+			}
+			else {
+				if (MInput.ControlsCheck) {
+					dragState = LevelEditorStates.Switch;
+				}
+				else if (MInput.AltsCheck) {
+					dragState = LevelEditorStates.Eyedrop;
+				}
+				else if (MInput.ShiftsCheck) {
+					if (state == LevelEditorStates.Draw)
+						dragState = LevelEditorStates.Rectangle;
+				}
+			}
+			if (dragState != LevelEditorStates.None) {
+				state = dragState;
 			}
 
 			switch (state) {
 				case LevelEditorStates.Draw:
-					SetTile(MInput.Mouse.Position, brushValue);
+					SetTile(MInput.Mouse.Position, erasing ? ' ' : brushValue);
 					break;
-				case LevelEditorStates.Erase:
-					SetTile(MInput.Mouse.Position, ' ');
+				case LevelEditorStates.Switch: {
+
+					Vector2 mouse = WindowToGrid(MInput.Mouse.Position);
+					for (int i = 0; i < visualGrids.Length; ++i) {
+						if (MainLevel.tileMaps[i].tiles[(int)mouse.X, (int)mouse.Y] != ' ') {
+							SwitchToLayer(i);
+							break;
+						}
+					}
 					break;
+				}
+				case LevelEditorStates.Eyedrop: {
+					Vector2 mouse = WindowToGrid(MInput.Mouse.Position);
+
+					baseState = LevelEditorStates.Draw;
+					BrushValue = currentLayer[(int)mouse.X, (int)mouse.Y];
+
+					break;
+				}
 			}
 		}
 
 		private void MouseUp(int x, int y, bool newScene) {
-			heldState = LevelEditorStates.None;
+
+			var state = baseState;
+			if (dragState != LevelEditorStates.None) {
+				state = dragState;
+			}
+			if (newScene)
+				state = LevelEditorStates.None;
+
+			switch (state) {
+				case LevelEditorStates.Rectangle:
+					Vector2 start = new Vector2((int)(mouseDownPosition.X / TileSize), (int)(mouseDownPosition.Y / TileSize));
+					Vector2 end = WindowToGrid(MInput.Mouse.Position);
+
+					DrawRectangle((int)Math.Min(start.X, end.X), (int)Math.Min(start.Y, end.Y), (int)Math.Abs(start.X - end.X) + 1, (int)Math.Abs(start.Y - end.Y) + 1, erasing ? ' ' : brushValue);
+
+					break;
+				case LevelEditorStates.Resize:
+					Vector2 offset = ResizeOffset();
+
+					Extend(resizeDirection.X < 0 ? (int)-offset.X : 0, resizeDirection.X > 0 ? (int)offset.X : 0,
+						   resizeDirection.Y < 0 ? (int)-offset.Y : 0, resizeDirection.Y > 0 ? (int)offset.Y : 0);
+
+					for (int i = 0; i < visualGrids.Length; ++i) {
+						visualGrids[i].ClipRectangle = null;
+					}
+
+					break;
+			}
+			dragState = LevelEditorStates.None;
 			OnMouseDrag -= MouseDragged;
 		}
 
 		private void MouseDragged(int x, int y, bool newScene) {
 
 			var state = baseState;
-			if (heldState != LevelEditorStates.None) {
-				state = heldState;
+			if (dragState != LevelEditorStates.None) {
+				state = dragState;
 			}
 
 			switch (state) {
@@ -496,20 +769,61 @@ namespace Pixtro.Scenes {
 						Camera.Position -= MInput.Mouse.PositionDelta / Camera.Zoom;
 					break;
 				case LevelEditorStates.Draw:
-					DrawLine(MInput.Mouse.Position, new Vector2(MInput.Mouse.PreviousState.X, MInput.Mouse.PreviousState.Y), brushValue);
+					DrawLine(MInput.Mouse.Position, new Vector2(MInput.Mouse.PreviousState.X, MInput.Mouse.PreviousState.Y), erasing ? ' ' : brushValue);
 					break;
-				case LevelEditorStates.Erase:
-					DrawLine(MInput.Mouse.Position, new Vector2(MInput.Mouse.PreviousState.X, MInput.Mouse.PreviousState.Y), ' ');
+				case LevelEditorStates.MoveEntity:
+					Vector2 offset = GridDragOffset();
+					selectedEntity.X = Calc.Clamp(resizeDirection.X + (int)offset.X, 0, 255);
+					selectedEntity.Y = Calc.Clamp(resizeDirection.Y + (int)offset.Y, 0, 255);
 					break;
 			}
 
+		}
+
+		private Vector2 GridDragOffset() {
+			Vector2 offset = WindowToCanvas(MInput.Mouse.Position);
+			offset = new Vector2(Calc.Round((offset.X - mouseDownPosition.X) / TileSize), Calc.Round((offset.Y - mouseDownPosition.Y) / TileSize));
+
+			return offset;
+		}
+		private Vector2 ResizeOffset() {
+			Vector2 offset = WindowToCanvas(MInput.Mouse.Position);
+			offset = new Vector2(Calc.Round((offset.X - mouseDownPosition.X) / TileSize), Calc.Round((offset.Y - mouseDownPosition.Y) / TileSize));
+
+			offset.X = Math.Max(offset.X * resizeDirection.X, 32 - MainLevel.Width) * resizeDirection.X;
+			offset.Y = Math.Max(offset.Y * resizeDirection.Y, 22 -MainLevel.Height) * resizeDirection.Y;
+
+			return offset;
+		}
+		private Vector2 WindowToCanvas(Vector2 vector) {
+
+			vector.X -= VisualBounds.X;
+			vector.Y -= VisualBounds.Y;
+			vector /= Camera.Zoom;
+			vector += Camera.Position;
+
+			return vector;
+		}
+		private Vector2 WindowToGrid(Vector2 vector) {
+
+			vector.X -= VisualBounds.X;
+			vector.Y -= VisualBounds.Y;
+			vector /= Camera.Zoom;
+			vector += Camera.Position;
+
+			vector /= TileSize;
+
+			vector.X = (int)vector.X;
+			vector.Y = (int)vector.Y;
+
+			return vector;
 		}
 
 		#region Set Tiles
 		List<Point> points = new List<Point>();
 
 		private void SetTileLocal(int x, int y, char value) {
-			if (x < 0 || y < 0 || x >= rawTilemap.Columns || y >= rawTilemap.Rows) {
+			if (x < 0 || y < 0 || x >= MainLevel.Width || y >= MainLevel.Height) {
 				return;
 			}
 			Point p = new Point(x, y);
@@ -517,20 +831,20 @@ namespace Pixtro.Scenes {
 				points.Add(p);
 			foreach (var item in VisualData.updateOffsets) {
 				Point po = p + item;
-				if (po.X < 0 || po.Y < 0 || po.X >= rawTilemap.Columns || po.Y >= rawTilemap.Rows)
+				if (po.X < 0 || po.Y < 0 || po.X >= MainLevel.Width || po.Y >= MainLevel.Height)
 					continue;
 				
 				if (!points.Contains(p + item))
 					points.Add(p + item);
 			}
 
-			rawTilemap[x, y] = value;
+			currentLayer[x, y] = value;
 		}
 		private void SettleTiles() {
 
 			foreach (var item in points) {
 				
-				visualGrid.Tiles[item.X, item.Y] = VisualData.GetTile(item.X, item.Y, rawTilemap);
+				currentVisuals.Tiles[item.X, item.Y] = VisualData.GetTile(item.X, item.Y, currentLayer);
 			}
 			points.Clear();
 		}
@@ -538,21 +852,19 @@ namespace Pixtro.Scenes {
 
 			for (int x = 0; x < MainLevel.Width; ++x)
 				for (int y = 0; y < MainLevel.Height; ++y)
-					visualGrid.Tiles[x, y] = VisualData.GetTile(x, y, rawTilemap);
+					currentVisuals.Tiles[x, y] = VisualData.GetTile(x, y, currentLayer);
 
 			points.Clear();
 		}
+
 		public void SetTile(int x, int y, char value) {
 			SetTileLocal(x, y, value);
 			SettleTiles();
 		}
 		public void SetTile(Vector2 position, char value) {
-			position.X -= VisualBounds.X;
-			position.Y -= VisualBounds.Y;
-			position /= Camera.Zoom;
-			position += Camera.Position;
+			position = WindowToGrid(position);
 
-			SetTile((int)(position.X / TileSize), (int)(position.Y / TileSize), value);
+			SetTile((int)position.X, (int)position.Y, value);
 		}
 
 		public void DrawLine(Point start, Point end, char value) {
@@ -569,19 +881,33 @@ namespace Pixtro.Scenes {
 			SettleTiles();
 		}
 		public void DrawLine(Vector2 start, Vector2 end, char value) {
-			start.X -= VisualBounds.X;
-			start.Y -= VisualBounds.Y;
-			start /= Camera.Zoom;
-			start += Camera.Position;
-
-			end.X -= VisualBounds.X;
-			end.Y -= VisualBounds.Y;
-			end /= Camera.Zoom;
-			end += Camera.Position;
+			start = WindowToGrid(start);
+			end = WindowToGrid(end);
 
 			DrawLine(
-				new Point((int)(start.X / TileSize), (int)(start.Y / TileSize)),
-				new Point((int)(end.X / TileSize), (int)(end.Y / TileSize)), value);
+				new Point((int)start.X, (int)start.Y),
+				new Point((int)end.X, (int)end.Y), value);
+		}
+
+		public void DrawRectangle(Rectangle rect, char value) {
+			DrawRectangle(rect.X, rect.Y, rect.Width, rect.Height, value);
+		}
+		public void DrawRectangle(int x, int y, int width, int height, char value) {
+			if (width <= 0 || height <= 0)
+				return;
+
+			x = Math.Max(x, 0);
+			y = Math.Max(y, 0);
+
+			width = Math.Min(x + width, MainLevel.Width);
+			height = Math.Min(y + height, MainLevel.Height);
+
+			for (; x < width; ++x) {
+				for (int yy = y; yy < height; ++yy) {
+					SetTileLocal(x, yy, value);
+				}
+			}
+			SettleTiles();
 		}
 
 		#endregion
@@ -601,13 +927,37 @@ namespace Pixtro.Scenes {
 			base.FocusedUpdate();
 
 			if (MInput.Keyboard.Pressed(Keys.B)) {
-				baseState = LevelEditorStates.Draw;
+				BrushValue = brushValue;
+				baseState = MInput.ShiftsCheck ? LevelEditorStates.Rectangle : LevelEditorStates.Draw;
 			}
 			if (MInput.Keyboard.Pressed(Keys.E)) {
-				baseState = LevelEditorStates.Erase;
+				brushIndex = 0;
+				baseState = MInput.ShiftsCheck ? LevelEditorStates.Rectangle : LevelEditorStates.Draw;
+				
 			}
 			if (MInput.ControlsCheck && MInput.Keyboard.Pressed(Keys.S)) {
 				MainLevel.Save();
+			}
+
+			if (MInput.Mouse.CheckLeftButton && MInput.Keyboard.Pressed(Keys.Escape)) {
+				for (int i = 0; i < visualGrids.Length; ++i) {
+					visualGrids[i].ClipRectangle = null;
+				}
+				switch (dragState) {
+					case LevelEditorStates.MoveEntity:
+
+						selectedEntity.X = Calc.Clamp(resizeDirection.X, 0, 255);
+						selectedEntity.Y = Calc.Clamp(resizeDirection.Y, 0, 255);
+						break;
+				}
+
+				dragState = LevelEditorStates.Cancel;
+			}
+
+			if (MInput.Keyboard.Pressed(Keys.Delete) || MInput.Keyboard.Pressed(Keys.Back)) {
+				if (selectedEntity != null) {
+					MainLevel.entities.Remove(selectedEntity);
+				}
 			}
 
 			if (MInput.Keyboard.Pressed(Keys.D1)) {
@@ -632,27 +982,93 @@ namespace Pixtro.Scenes {
 			base.Update();
 			if (VisualBounds.Contains(MInput.Mouse.X, MInput.Mouse.Y) && MInput.Mouse.WheelDelta != 0) {
 
-				Camera.Position -= (new Vector2(VisualBounds.X, VisualBounds.Y) - MInput.Mouse.Position) / Camera.Zoom;
+				if (MInput.AltsCheck) {
+					BrushIndex -= Math.Sign(MInput.Mouse.WheelDelta);
+				}
+				else {
+					Camera.Position -= (new Vector2(VisualBounds.X, VisualBounds.Y) - MInput.Mouse.Position) / Camera.Zoom;
 
-				zoomIndex = Calc.Clamp(zoomIndex + Math.Sign(MInput.Mouse.WheelDelta), 0, ZOOM_LEVELS.Length - 1);
+					zoomIndex = Calc.Clamp(zoomIndex + Math.Sign(MInput.Mouse.WheelDelta), 0, ZOOM_LEVELS.Length - 1);
 
-				Camera.Zoom = ZOOM_LEVELS[zoomIndex];
+					Camera.Zoom = ZOOM_LEVELS[zoomIndex];
 
-				Camera.Position += (new Vector2(VisualBounds.X, VisualBounds.Y) - MInput.Mouse.Position) / Camera.Zoom;
+					Camera.Position += (new Vector2(VisualBounds.X, VisualBounds.Y) - MInput.Mouse.Position) / Camera.Zoom;
+				}
 				
 			}
 		}
 
 		public override void DrawGraphics() {
+
+
+			var state = baseState;
+			if (dragState != LevelEditorStates.None) {
+				state = dragState;
+			}
+
+			int left = 0, up = 0, width = MainLevel.Width, height = MainLevel.Height;
+
+			if (MInput.Mouse.CheckLeftButton && state == LevelEditorStates.Resize) {
+				Vector2 offset = ResizeOffset();
+
+				if (resizeDirection.X > 0) {
+					width += (int)offset.X;
+				}
+				else if (resizeDirection.X < 0) {
+					left += (int)offset.X;
+					width -= (int)offset.X;
+				}
+				if (resizeDirection.Y > 0) {
+					height += (int)offset.Y;
+				}
+				else if (resizeDirection.Y < 0) {
+					up += (int)offset.Y;
+					height -= (int)offset.Y;
+				}
+
+				for (int i = 0; i < visualGrids.Length; ++i) {
+					visualGrids[i].ClipRectangle = new Rectangle(left, up, width + (left * 2), height + (up * 2));
+				}
+			}
+
 			base.DrawGraphics();
+
+			Draw.Depth += 10;
+
+			if (MInput.Mouse.CheckLeftButton && state == LevelEditorStates.Rectangle) {
+				Vector2 start = new Vector2(Calc.SnapFloor(mouseDownPosition.X, TileSize), Calc.SnapFloor(mouseDownPosition.Y, TileSize));
+				Vector2 end = WindowToGrid(MInput.Mouse.Position) * TileSize;
+
+				Rectangle rect = new Rectangle((int)Math.Min(start.X, end.X), (int)Math.Min(start.Y, end.Y), (int)Math.Abs(start.X - end.X) + TileSize, (int)Math.Abs(start.Y - end.Y) + TileSize);
+
+				Draw.Rect(rect, Color.White * 0.3f);
+				Draw.Depth += 2;
+				Draw.HollowRect(rect, Color.White, 1);
+			}
+
+			Draw.Depth += 100;
+
+			foreach (var ent in MainLevel.entities) {
+				if (ent.sprite != null) {
+					ent.sprite.drawDepth = Draw.Depth;
+					ent.sprite.Position = new Vector2(ent.X * TileSize + ent.RenderOffset.X, ent.Y * TileSize + ent.RenderOffset.Y);
+					ent.sprite.Render();
+				}
+				Draw.HollowRect(ent.bounds, ent == selectedEntity ? Color.White : Color.Magenta, 1, 2);
+			}
+
 			Draw.Depth = Draw.FARTHEST_DEPTH;
-			Draw.Rect(0, 0, rawTilemap.Columns * TileSize, rawTilemap.Rows * TileSize, ColorSchemes.CurrentScheme.CanvasBackground);
+			Draw.Rect(left * TileSize, up * TileSize, width * TileSize, height * TileSize, ColorSchemes.CurrentScheme.CanvasBackground);
+
+			int right = width + left;
+			int down = height + up;
 
 			Draw.Depth++;
-			for (int i = 1; i < rawTilemap.Columns; ++i)
-				Draw.Rect(8 * i, 0, 1 / Camera.Zoom, rawTilemap.Rows * TileSize, Color.Black);
-			for (int i = 1; i < rawTilemap.Rows; ++i)
-				Draw.Rect(0, 8 * i, rawTilemap.Columns * TileSize, 1 / Camera.Zoom, Color.Black);
+			for (int i = left + 1; i < right; ++i)
+				Draw.Rect(TileSize * i, up * TileSize, 1 / Camera.Zoom, height * TileSize, Color.Black);
+			for (int i = up + 1; i < down; ++i)
+				Draw.Rect(left * TileSize, TileSize * i, width * TileSize, 1 / Camera.Zoom, Color.Black);
+
 		}
 	}
 }

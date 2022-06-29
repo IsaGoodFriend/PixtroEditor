@@ -11,6 +11,12 @@ using DSDecmp;
 
 namespace Pixtro.Compiler {
 	public class VisualPackMetadata {
+
+		public struct EntityPreview {
+			public int Width, Height;
+			public string Sprite;
+			public Point RenderOffset, Offset;
+		}
 		public class TileWrapping {
 
 			public int Palette;
@@ -105,6 +111,7 @@ namespace Pixtro.Compiler {
 		public Dictionary<string, FlippableLayout<LargeTile>> tilesetFound = new Dictionary<string, FlippableLayout<LargeTile>>();
 
 		public Dictionary<string, int> EntityIndex;
+		public Dictionary<int, EntityPreview> EntitySprites;
 
 
 		public string[] LevelPacks;

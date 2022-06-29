@@ -12,8 +12,11 @@ namespace Monocle {
 		public int VisualExtend = 0;
 		public VirtualMap<MTexture> Tiles;
 		public Camera ClipCamera;
+		public Rectangle? ClipRectangle;
 		public float Alpha = 1f;
 		public float SpriteScale;
+
+		public int Depth;
 
 		public TileGrid(int tileWidth, int tileHeight, int tilesX, int tilesY)
 			: base(false, true) {
@@ -124,23 +127,35 @@ namespace Monocle {
 		}
 
 		public Rectangle GetClippedRenderTiles() {
+
 			var pos = Entity.Position + Position;
 
 			int left, top, right, bottom;
-			if (ClipCamera == null) {
-				//throw new Exception("NULL CLIP: " + Entity.GetType().ToString());
-				left = -VisualExtend;
-				top = -VisualExtend;
-				right = TilesX + VisualExtend;
-				bottom = TilesY + VisualExtend;
+			if (ClipRectangle != null) {
+				left = ClipRectangle.Value.X;
+				top = ClipRectangle.Value.Y;
+				right = ClipRectangle.Value.Width - left;
+				bottom = ClipRectangle.Value.Height - top;
 			}
 			else {
-				var camera = ClipCamera;
-				left = (int)Math.Max(0, Math.Floor((camera.Left - pos.X) / TileWidth) - VisualExtend);
-				top = (int)Math.Max(0, Math.Floor((camera.Top - pos.Y) / TileHeight) - VisualExtend);
-				right = (int)Math.Min(TilesX, Math.Ceiling((camera.Right - pos.X) / TileWidth) + VisualExtend);
-				bottom = (int)Math.Min(TilesY, Math.Ceiling((camera.Bottom - pos.Y) / TileHeight) + VisualExtend);
+				left = 0;
+				top = 0;
+				right = TilesX;
+				bottom = TilesY;
 			}
+			if (ClipCamera != null) {
+
+				var camera = ClipCamera;
+				left = (int)Math.Max(left, Math.Floor((camera.Left - pos.X) / TileWidth));
+				top = (int)Math.Max(right, Math.Floor((camera.Top - pos.Y) / TileHeight));
+				right = (int)Math.Min(right, Math.Ceiling((camera.Right - pos.X) / TileWidth));
+				bottom = (int)Math.Min(bottom, Math.Ceiling((camera.Bottom - pos.Y) / TileHeight));
+			}
+
+			left -= VisualExtend;
+			top -= VisualExtend;
+			right += VisualExtend;
+			bottom += VisualExtend;
 
 			// clamp
 			left = Math.Max(left, 0);
@@ -159,7 +174,9 @@ namespace Monocle {
 			if (Alpha <= 0)
 				return;
 
-			float d = Draw.RealDepth;
+			int ogDepth = Draw.Depth;
+
+			Draw.Depth += Depth;
 
 			var clip = GetClippedRenderTiles();
 			var color = Color * Alpha;
@@ -168,9 +185,12 @@ namespace Monocle {
 			for (int tx = clip.Left; tx < clip.Right; tx++)
 				for (int ty = clip.Top; ty < clip.Bottom; ty++) {
 					tile = Tiles[tx, ty];
+					
 					if (tile != null)
 						tile.Draw(position + new Vector2(tx * TileWidth, ty * TileHeight), Vector2.Zero, color, SpriteScale);
 				}
+
+			Draw.Depth = ogDepth;
 		}
 
 	}
