@@ -20,13 +20,13 @@ namespace Pixtro.Projects {
 
 		public Dictionary<string, Scenes.LevelPack> VisualPacks;
 
+		private Dictionary<string, string[]> LevelVisualPacks;
+
 		public static void OpenProject(string filePath) {
 			if (CurrentProject != null) {
 				CurrentProject.Dispose();
 			}
 			CurrentProject = new ProjectInfo(filePath);
-
-			filePath = Path.GetDirectoryName(filePath);
 		}
 
 		public static void BuildProject(bool release) {
@@ -107,8 +107,9 @@ namespace Pixtro.Projects {
 		}
 
 
-		public readonly string ProjectPath;
-		public string ProjectDirectory => Path.GetDirectoryName(ProjectPath);
+		public readonly string ProjectDirectory;
+		public string ProjectPath => Path.Combine(ProjectDirectory, projectFile + ".pxprj");
+		private string projectFile;
 		private Version formatVersion;
 		private BinaryFileWriter nodes;
 
@@ -124,12 +125,14 @@ namespace Pixtro.Projects {
 			}
 		}
 
-		public string Name => Path.GetFileNameWithoutExtension(ProjectPath);
+		public string Name => projectFile;
 
 		public string CurrentLevelPack { get; set; }
 
 		private ProjectInfo(string path) {
-			ProjectPath = path;
+			ProjectDirectory = Path.GetDirectoryName(path);
+			projectFile = Path.GetFileNameWithoutExtension(path);
+
 
 			if (File.Exists(path)) {
 				InitFromFile(path);
@@ -203,10 +206,30 @@ namespace Pixtro.Projects {
 			dirty = false;
 		}
 
+		public Scenes.LevelPack GetPack(string level) {
+			level = Path.ChangeExtension(level, null);
+			foreach (var pair in LevelVisualPacks)
+				if (pair.Value.Contains(level.Replace('\\', '/')))
+					foreach (var pack in VisualPacks.Values)
+						if (pack.VisualData.LevelPacks != null && pack.VisualData.LevelPacks.Contains(pair.Key))
+							return pack;
+				
+
+			return null;
+		}
+
 		public void LoadContent() {
-			var dictionary = JsonConvert.DeserializeObject<Dictionary<string, Pixtro.Compiler.VisualPackMetadata>>(File.ReadAllText(Path.Combine(Path.GetDirectoryName(ProjectPath), "levels", "meta_level.json")));
+			
+			LevelVisualPacks = new Dictionary<string, string[]>();
+
+			foreach (var file in Directory.EnumerateFiles(Path.Combine(ProjectDirectory, "levels", "_packs"))) {
+				LevelVisualPacks.Add(Path.GetFileNameWithoutExtension(file), File.ReadAllLines(file));
+			}
+
+			var dictionary = JsonConvert.DeserializeObject<Dictionary<string, Compiler.VisualPackMetadata>>(File.ReadAllText(Path.Combine(ProjectDirectory, "levels", "meta_level.json")));
 
 			VisualPacks = new Dictionary<string, Scenes.LevelPack>();
+			var globalPack = dictionary["global"];
 			foreach (var p in dictionary) {
 				if (p.Value.Wrapping == null)
 					continue;
@@ -225,6 +248,16 @@ namespace Pixtro.Projects {
 					}
 
 					wrap.FinalizeMasks();
+				}
+				if (p.Value.EntityIndex == null)
+					p.Value.EntityIndex = new Dictionary<string, int>();
+				foreach (var pair in globalPack.EntityIndex) {
+					p.Value.EntityIndex[pair.Key] = pair.Value;
+				}
+				if (p.Value.EntitySprites == null)
+					p.Value.EntitySprites = new Dictionary<int, Compiler.VisualPackMetadata.EntityPreview>();
+				foreach (var pair in globalPack.EntitySprites) {
+					p.Value.EntitySprites[pair.Key] = pair.Value;
 				}
 
 				VisualPacks.Add(p.Key, new Scenes.LevelPack(p.Value));

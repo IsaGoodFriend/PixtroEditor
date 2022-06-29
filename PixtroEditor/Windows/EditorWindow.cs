@@ -39,8 +39,8 @@ namespace Pixtro.Editor {
 			base.LoadContent();
 
 			Atlases.EngineGraphics = Atlas.FromDirectory("Graphics");
-			string path = Path.GetDirectoryName(Projects.ProjectInfo.CurrentProject.ProjectPath);
-			Atlases.GameSprites = Atlas.FromDirectory(Projects.ProjectInfo.CurrentProject.ProjectPath);
+			string path = Projects.ProjectInfo.CurrentProject.ProjectDirectory;
+			Atlases.GameSprites = Atlas.FromDirectory(Path.Combine(path, "art"));
 
 			EmulationHandler.InitializeGraphics();
 

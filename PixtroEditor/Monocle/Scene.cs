@@ -11,9 +11,7 @@ using Pixtro.Scenes;
 namespace Monocle {
 
 	public class Scene : IEnumerable<Entity>, IEnumerable {
-		public bool Paused;
 		public float TimeActive;
-		public float RawTimeActive;
 		public bool Focused { get; private set; }
 		public EntityList Entities { get; private set; }
 		public TagLists TagLists { get; private set; }
@@ -37,7 +35,8 @@ namespace Monocle {
 				("Emulator", Change),
 				("Level Editor", Change),
 				("Console", Change),
-				("Memory Viewer", Change)
+				("Memory Viewer", Change),
+				("File Viewer", Change)
 			);
 		}
 
@@ -60,7 +59,12 @@ namespace Monocle {
 				case 3:
 					newScene = new MemoryPeekScene();
 					break;
+				case 4:
+					newScene = new ProjectBrowserScene();
+					break;
 			}
+			if (newScene == null)
+				return;
 
 			var item = Engine.Layout.GetElementAt(p + new Point(3)) as EditorLayout.LayoutWindow;
 
