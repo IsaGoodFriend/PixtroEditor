@@ -2049,7 +2049,7 @@ namespace Monocle {
 		}
 
 		public static void TimeLog() {
-			Debug.WriteLine(Engine.CurrentScene.RawTimeActive);
+			Debug.WriteLine(Engine.CurrentScene.TimeActive);
 		}
 
 		public static void Log(params object[ ] obj) {
@@ -2062,7 +2062,7 @@ namespace Monocle {
 		}
 
 		public static void TimeLog(object obj) {
-			Debug.WriteLine(Engine.CurrentScene.RawTimeActive + " : " + obj);
+			Debug.WriteLine(Engine.CurrentScene.TimeActive + " : " + obj);
 		}
 
 		public static void LogEach<T>(IEnumerable<T> collection) {

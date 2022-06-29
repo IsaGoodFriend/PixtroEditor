@@ -36,7 +36,6 @@ namespace Monocle {
 		public float ValueOverTwo { get; private set; }
 		public float TwoValue { get; private set; }
 		public Action<float> OnUpdate;
-		public bool UseRawDeltaTime;
 
 		private float counter;
 
@@ -51,7 +50,7 @@ namespace Monocle {
 		}
 
 		public override void Update() {
-			Counter += MathHelper.TwoPi * Frequency * Rate * (UseRawDeltaTime ? Engine.RawDeltaTime : Engine.DeltaTime);
+			Counter += MathHelper.TwoPi * Frequency * Rate * (Engine.DeltaTime);
 			if (OnUpdate != null)
 				OnUpdate(Value);
 		}

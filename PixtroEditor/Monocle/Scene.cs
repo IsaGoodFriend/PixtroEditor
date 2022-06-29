@@ -114,12 +114,9 @@ namespace Monocle {
 		}
 
 		public virtual void BeforeUpdate() {
-			if (!Paused)
-				TimeActive += Engine.DeltaTime;
-			RawTimeActive += Engine.RawDeltaTime;
+			TimeActive += Engine.DeltaTime;
 
-			if (!Paused)
-				Entities.BeforeUpdate();
+			Entities.BeforeUpdate();
 
 			UIBounds.Transform.Bounds = VisualBounds;
 		}
@@ -133,9 +130,7 @@ namespace Monocle {
 		}
 
 		public virtual void FocusedUpdate() {
-			if (!Paused) {
-				Entities.Update();
-			}
+			Entities.Update();
 		}
 
 		public virtual void AfterUpdate() {
@@ -205,18 +200,6 @@ namespace Monocle {
 
 		public bool BetweenInterval(float interval) {
 			return Calc.BetweenInterval(TimeActive, interval);
-		}
-
-		public bool OnRawInterval(float interval) {
-			return (int)((RawTimeActive - Engine.RawDeltaTime) / interval) < (int)(RawTimeActive / interval);
-		}
-
-		public bool OnRawInterval(float interval, float offset) {
-			return Math.Floor((RawTimeActive - offset - Engine.RawDeltaTime) / interval) < Math.Floor((RawTimeActive - offset) / interval);
-		}
-
-		public bool BetweenRawInterval(float interval) {
-			return Calc.BetweenInterval(RawTimeActive, interval);
 		}
 
 		#endregion

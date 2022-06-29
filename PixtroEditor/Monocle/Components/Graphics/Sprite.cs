@@ -8,7 +8,6 @@ using System.Text;
 namespace Monocle {
 	public class Sprite : Image {
 		public float Rate = 1f;
-		public bool UseRawDeltaTime;
 		public Vector2? Justify;
 		public Action<string> OnFinish;
 		public Action<string> OnLoop;
@@ -59,10 +58,7 @@ namespace Monocle {
 		public override void Update() {
 			if (Animating) {
 				//Timer
-				if (UseRawDeltaTime)
-					animationTimer += Engine.RawDeltaTime * Rate;
-				else
-					animationTimer += Engine.DeltaTime * Rate;
+				animationTimer += Engine.DeltaTime * Rate;
 
 				//Next Frame
 				if (Math.Abs(animationTimer) >= currentAnimation.Delay) {

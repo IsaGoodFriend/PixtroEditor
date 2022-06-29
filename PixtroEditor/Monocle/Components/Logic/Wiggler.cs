@@ -9,7 +9,6 @@ namespace Monocle {
 		public float Counter { get; private set; }
 		public float Value { get; private set; }
 		public bool StartZero;
-		public bool UseRawDeltaTime;
 
 		private float sineCounter;
 
@@ -37,7 +36,6 @@ namespace Monocle {
 
 		private void Init(float duration, float frequency, Action<float> onChange, bool start, bool removeSelfOnFinish) {
 			Counter = sineCounter = 0;
-			UseRawDeltaTime = false;
 
 			increment = 1f / duration;
 			sineAdd = MathHelper.TwoPi * frequency;
@@ -90,14 +88,10 @@ namespace Monocle {
 		}
 
 		public override void Update() {
-			if (UseRawDeltaTime) {
-				sineCounter += sineAdd * Engine.RawDeltaTime;
-				Counter -= increment * Engine.RawDeltaTime;
-			}
-			else {
-				sineCounter += sineAdd * Engine.DeltaTime;
-				Counter -= increment * Engine.DeltaTime;
-			}
+			
+			sineCounter += sineAdd * Engine.DeltaTime;
+			Counter -= increment * Engine.DeltaTime;
+			
 
 			if (Counter <= 0) {
 				Counter = 0;

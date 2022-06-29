@@ -42,10 +42,7 @@ namespace Monocle {
 		public override void Update() {
 			if (Animating && currentAnimation.Delay > 0) {
 				//Timer
-				if (UseRawDeltaTime)
-					animationTimer += Engine.RawDeltaTime * Rate;
-				else
-					animationTimer += Engine.DeltaTime * Rate;
+				animationTimer += Engine.DeltaTime * Rate;
 
 				//Next Frame
 				if (Math.Abs(animationTimer) >= currentAnimation.Delay) {

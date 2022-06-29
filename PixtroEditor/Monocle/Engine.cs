@@ -45,8 +45,6 @@ namespace Monocle {
 
 		// time
 		public static float DeltaTime { get; private set; }
-		public static float DeltaTimeRate { get; private set; }
-		public static float RawDeltaTime { get; private set; }
 		public static float TimeAlive { get; private set; }
 		public static float TimeRate = 1f;
 		public static float FreezeTimer;
@@ -214,10 +212,8 @@ namespace Monocle {
 
 			Scene previousScene = activeScene;
 
-			RawDeltaTime = 1 / 60.0f;
-			DeltaTime = RawDeltaTime * TimeRate;
-			DeltaTimeRate = DeltaTime * 60;
-			TimeAlive += RawDeltaTime;
+			DeltaTime = 1 / 60.0f;
+			TimeAlive += DeltaTime;
 
 			//Update input
 			MInput.Update();
@@ -263,10 +259,8 @@ namespace Monocle {
 				activeScene.FocusedUpdate();
 				activeScene.AfterUpdate();
 			}
-			//Update current scene
-			if (FreezeTimer > 0)
-				FreezeTimer = Math.Max(FreezeTimer - RawDeltaTime, 0);
-			else if (GameState != null)
+				
+			if (GameState != null)
 				GameState.Update();
 
 			base.Update(gameTime);
