@@ -160,6 +160,10 @@ namespace Pixtro.Scenes {
 					metaData.Add(data[i]);
 				}
 			}
+			public void MoveTo(Point p) {
+				X = p.X;
+				Y = p.Y;
+			}
 		}
 
 		private LevelSaveType saveType;
@@ -454,13 +458,16 @@ namespace Pixtro.Scenes {
 
 		}
 
-		public void LoadLevel(string file) {
+		private void LoadLevelLocal(string file) {
+
 			var visual = Projects.ProjectInfo.CurrentProject.GetPack(file);
 
 			if (visual == null)
 				return;
 
 			VisualData = visual;
+
+			selectedEntity = null;
 
 			while (HelperEntity.Get<TileGrid>() != null) {
 				HelperEntity.Remove(HelperEntity.Get<TileGrid>());
@@ -472,9 +479,27 @@ namespace Pixtro.Scenes {
 			palette.UpdateTo(VisualData);
 
 			BrushValue = VisualData.CharIndex[1];
+
+			UndoStates.Clear();
 		}
-		private void OpenNew() {
-			
+
+		public void LoadLevel(string file) {
+			if (UndoStates.Dirty) {
+
+				switch (PromptHandler.AskForSaving("Warning!  Your level hasn't been saved!  Do you want to save before continuing?")) {
+					case "saveContinue":
+						MainLevel.Save();
+						goto case "continue";
+					case "continue":
+						LoadLevelLocal(file);
+						break;
+				}
+				//task.Start();
+			}
+			else {
+				LoadLevelLocal(file);
+			}
+
 		}
 
 		private void LoadTilesets() {
@@ -752,6 +777,9 @@ namespace Pixtro.Scenes {
 
 					break;
 			}
+
+			SetUndoState(state);
+
 			dragState = LevelEditorStates.None;
 			OnMouseDrag -= MouseDragged;
 		}
@@ -821,24 +849,42 @@ namespace Pixtro.Scenes {
 
 		#region Set Tiles
 		List<Point> points = new List<Point>();
+		Dictionary<Point, char> editedValues = new Dictionary<Point, char>();
+		Dictionary<Point, char> oldValues = new Dictionary<Point, char>();
+
+		private void UndoGrid(Dictionary<Point, char> states) {
+			foreach (var item in states) {
+				SetTile(item.Key, item.Value);
+			}
+			editedValues.Clear();
+			oldValues.Clear();
+
+			SettleTiles();
+		}
 
 		private void SetTileLocal(int x, int y, char value) {
 			if (x < 0 || y < 0 || x >= MainLevel.Width || y >= MainLevel.Height) {
 				return;
 			}
-			Point p = new Point(x, y);
-			if (!points.Contains(p))
-				points.Add(p);
-			foreach (var item in VisualData.updateOffsets) {
-				Point po = p + item;
-				if (po.X < 0 || po.Y < 0 || po.X >= MainLevel.Width || po.Y >= MainLevel.Height)
-					continue;
-				
-				if (!points.Contains(p + item))
-					points.Add(p + item);
-			}
+			if (currentLayer[x, y] != value) {
+				Point p = new Point(x, y);
+				if (!points.Contains(p))
+					points.Add(p);
 
-			currentLayer[x, y] = value;
+				foreach (var item in VisualData.updateOffsets) {
+					Point po = p + item;
+					if (po.X < 0 || po.Y < 0 || po.X >= MainLevel.Width || po.Y >= MainLevel.Height)
+						continue;
+
+					if (!points.Contains(p + item))
+						points.Add(p + item);
+				}
+
+				editedValues.Add(new Point(x, y), value);
+				oldValues.Add(new Point(x, y), currentLayer[x, y]);
+
+				currentLayer[x, y] = value;
+			}
 		}
 		private void SettleTiles() {
 
@@ -857,6 +903,33 @@ namespace Pixtro.Scenes {
 			points.Clear();
 		}
 
+		private void SetUndoState(LevelEditorStates state) {
+
+			if (editedValues.Count > 0) {
+
+				UndoStates.Push(new UndoState() {
+					Undo = (obj) => UndoGrid((Dictionary<Point, char>)obj),
+					Redo = (obj) => UndoGrid((Dictionary<Point, char>)obj),
+					UndoValue = oldValues,
+					RedoValue = editedValues
+				});
+
+				editedValues = new Dictionary<Point, char>();
+				oldValues = new Dictionary<Point, char>();
+			}
+			else if (state == LevelEditorStates.MoveEntity) {
+
+				var ent = selectedEntity;
+
+				UndoStates.Push(new UndoState() {
+					Undo = (obj) => ent.MoveTo((Point)obj),
+					Redo = (obj) => ent.MoveTo((Point)obj),
+					UndoValue = resizeDirection,
+					RedoValue = new Point(selectedEntity.X, selectedEntity.Y),
+				});
+			}
+		}
+
 		public void SetTile(int x, int y, char value) {
 			SetTileLocal(x, y, value);
 			SettleTiles();
@@ -865,6 +938,10 @@ namespace Pixtro.Scenes {
 			position = WindowToGrid(position);
 
 			SetTile((int)position.X, (int)position.Y, value);
+		}
+		public void SetTile(Point position, char value) {
+
+			SetTile(position.X, position.Y, value);
 		}
 
 		public void DrawLine(Point start, Point end, char value) {
@@ -937,6 +1014,7 @@ namespace Pixtro.Scenes {
 			}
 			if (MInput.ControlsCheck && MInput.Keyboard.Pressed(Keys.S)) {
 				MainLevel.Save();
+				UndoStates.SetNotDirty();
 			}
 
 			if (MInput.Mouse.CheckLeftButton && MInput.Keyboard.Pressed(Keys.Escape)) {

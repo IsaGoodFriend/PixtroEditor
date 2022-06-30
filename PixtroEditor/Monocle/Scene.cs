@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Graphics;
 using Pixtro.Editor;
 using Pixtro.UI;
@@ -20,6 +21,7 @@ namespace Monocle {
 		public Tracker Tracker { get; private set; }
 		public Camera Camera { get; private set; }
 		public SceneRenderer Renderer { get; private set; }
+		public UndoStack UndoStates { get; private set; }
 		public EditorLayout.LayoutWindow EditorLayout { get; internal set; }
 		public Rectangle PreviousBounds { get; internal set; }
 		public Rectangle VisualBounds => EditorLayout == null ? default : new Rectangle(EditorLayout.BoundingRect.X, EditorLayout.BoundingRect.Y + EditorWindow.SUB_MENU_BAR, EditorLayout.BoundingRect.Width, EditorLayout.BoundingRect.Height - EditorWindow.SUB_MENU_BAR);
@@ -88,6 +90,8 @@ namespace Monocle {
 				OnClick = OpenDropdown
 			});
 			element.Transform.Offset.Y = -EditorWindow.SUB_MENU_BAR;
+
+			UndoStates = new UndoStack();
 		}
 
 		public void UpdateMouse(bool sceneNew) {
@@ -135,6 +139,13 @@ namespace Monocle {
 
 		public virtual void FocusedUpdate() {
 			Entities.Update();
+
+			if (MInput.ControlsCheck && !MInput.ShiftsCheck && MInput.Keyboard.Pressed(Keys.Z)) {
+				UndoStates.Undo();
+			}
+			else if (MInput.ControlsCheck && (MInput.ShiftsCheck && MInput.Keyboard.Pressed(Keys.Z) || MInput.Keyboard.Pressed(Keys.Y))) {
+				UndoStates.Redo();
+			}
 		}
 
 		public virtual void AfterUpdate() {

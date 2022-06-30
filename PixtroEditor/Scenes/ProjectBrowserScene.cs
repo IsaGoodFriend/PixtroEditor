@@ -23,6 +23,8 @@ namespace Pixtro.Scenes {
 		List<string> folders;
 		List<string> files;
 
+		int size = 0;
+
 		int highlighted;
 
 		Dictionary<string, Image> icons;
@@ -37,6 +39,24 @@ namespace Pixtro.Scenes {
 			icons = new Dictionary<string, Image>();
 
 			icons.Add("folder", new Image(Atlases.EngineGraphics["UI/folder"]));
+
+		}
+
+		private void Clamp() {
+			int bottom = (size * LINE_SPACE) - VisualBounds.Height;
+			if (Camera.Y > bottom)
+				Camera.Y = bottom;
+			if (Camera.Y < 0)
+				Camera.Y = 0;
+		}
+
+		public override void OnResize() {
+			base.OnResize();
+
+			if (Camera.Y > 0) {
+				Camera.Y += (VisualBounds.Y - PreviousBounds.Y);
+				Clamp();
+			}
 		}
 
 		public void LoadFolder(string folder) {
@@ -60,9 +80,18 @@ namespace Pixtro.Scenes {
 				folders.Add(name);
 			}
 			foreach (var file in Directory.EnumerateFiles(folder)) {
+				string ext = Path.GetExtension(file);
 				string name = Path.GetFileName(file);
+
+				if (ext == ".elf" || ext == ".gba" || ext == ".pxprj")
+					continue;
+				if (name.StartsWith('.'))
+					continue;
+
 				files.Add(name);
 			}
+
+			size = folders.Count + files.Count;
 		}
 
 		private void OpenFile(string file) {
@@ -94,7 +123,9 @@ namespace Pixtro.Scenes {
 			lastLeftClick += Engine.DeltaTime;
 
 			if (UIFramework.HoveredControl == null && UIBounds.Transform.Bounds.Contains((int)MInput.Mouse.X, (int)MInput.Mouse.Y)) {
-				int pos = (int)(MInput.Mouse.Y - (Camera.Y + UIBounds.Transform.Y));
+				int pos = (int)(MInput.Mouse.Y + Camera.Y - ( UIBounds.Transform.Y));
+
+				Camera.Y -= LINE_SPACE * Math.Sign(MInput.Mouse.WheelDelta);
 
 				highlighted = pos / LINE_SPACE;
 
@@ -121,7 +152,11 @@ namespace Pixtro.Scenes {
 			else {
 				highlighted = -1;
 			}
+
+			Clamp();
 		}
+
+		
 
 		public override void DrawGraphics() {
 			base.DrawGraphics();

@@ -13,9 +13,11 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <WarningLevel>5</WarningLevel>
+    <DefineConstants>$(DefineConstants)TRACE;WINDOWS</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>$(DefineConstants)TRACE;WINDOWS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Content\obj\**" />
