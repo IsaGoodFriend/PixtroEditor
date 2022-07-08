@@ -8,11 +8,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using Newtonsoft.Json;
+using System.Threading;
 
 namespace Monocle {
 
 	public class Atlas {
-		public List<Texture2D> Sources;
+		private string mainDirectory;
 		private Dictionary<string, MTexture> textures = new Dictionary<string, MTexture>(StringComparer.OrdinalIgnoreCase);
 		private Dictionary<string, List<MTexture>> orderedTexturesCache = new Dictionary<string, List<MTexture>>();
 
@@ -26,9 +27,34 @@ namespace Monocle {
 			PackerNoAtlas
 		};
 
+		public static Texture2D TextureFromFile(string file, string contentDirectory) {
+
+			if (Path.GetExtension(file) == ".xnb")
+				return Engine.Instance.Content.Load<Texture2D>(Path.ChangeExtension(Path.GetRelativePath(contentDirectory, file), null));
+			else {
+				Texture2D tex = null;
+
+				int i = 0;
+				for (; i < 20; i++) {
+					try {
+						using (var stream = File.Open(file, FileMode.Open, FileAccess.Read))
+							tex = Texture2D.FromStream(Draw.SpriteBatch.GraphicsDevice, stream);
+
+						break;
+					}
+					catch (IOException) {
+					}
+					Thread.Sleep(20);
+				}
+
+				return tex;
+			}
+
+
+		}
+
 		public static Atlas FromAtlas(string path, AtlasDataFormat format) {
 			var atlas = new Atlas();
-			atlas.Sources = new List<Texture2D>();
 			ReadAtlasData(atlas, path, format);
 			return atlas;
 		}
@@ -45,7 +71,6 @@ namespace Monocle {
 						fileStream.Close();
 
 						var mTexture = new MTexture(texture);
-						atlas.Sources.Add(texture);
 
 						var subtextures = at.GetElementsByTagName("SubTexture");
 
@@ -70,7 +95,6 @@ namespace Monocle {
 							fileStream.Close();
 
 							var mTexture = new MTexture(texture);
-							atlas.Sources.Add(texture);
 
 							foreach (XmlElement sub in tex) {
 								var name = sub.Attr("n");
@@ -95,8 +119,6 @@ namespace Monocle {
 							var fileStream = new FileStream(texturePath, FileMode.Open, FileAccess.Read);
 							var texture = Texture2D.FromStream(Engine.Instance.GraphicsDevice, fileStream);
 							fileStream.Close();
-
-							atlas.Sources.Add(texture);
 
 							var mTexture = new MTexture(texture);
 							var subtextures = reader.ReadInt16();
@@ -142,7 +164,6 @@ namespace Monocle {
 								var texture = Texture2D.FromStream(Engine.Instance.GraphicsDevice, fileStream);
 								fileStream.Close();
 
-								atlas.Sources.Add(texture);
 								atlas.textures[name] = new MTexture(texture, new Vector2(-fx, -fy), fw, fh);
 							}
 						}
@@ -164,8 +185,6 @@ namespace Monocle {
 							var fileStream = new FileStream(texturePath, FileMode.Open, FileAccess.Read);
 							var texture = Texture2D.FromStream(Engine.Instance.GraphicsDevice, fileStream);
 							fileStream.Close();
-
-							atlas.Sources.Add(texture);
 
 							var mTexture = new MTexture(texture);
 							var subtextures = reader.ReadInt16();
@@ -215,7 +234,6 @@ namespace Monocle {
 								var texture = Texture2D.FromStream(Engine.Instance.GraphicsDevice, fileStream);
 								fileStream.Close();
 
-								atlas.Sources.Add(texture);
 								atlas.textures[name] = new MTexture(texture, new Vector2(-fx, -fy), fw, fh);
 							}
 						}
@@ -239,7 +257,6 @@ namespace Monocle {
 
 		public static Atlas FromMultiAtlas(string rootPath, string[ ] dataPath, AtlasDataFormat format) {
 			var atlas = new Atlas();
-			atlas.Sources = new List<Texture2D>();
 
 			for (int i = 0; i < dataPath.Length; i++)
 				ReadAtlasData(atlas, Path.Combine(rootPath, dataPath[i]), format);
@@ -249,7 +266,6 @@ namespace Monocle {
 
 		public static Atlas FromMultiAtlas(string rootPath, string filename, AtlasDataFormat format) {
 			var atlas = new Atlas();
-			atlas.Sources = new List<Texture2D>();
 
 			var index = 0;
 			while (true) {
@@ -267,7 +283,6 @@ namespace Monocle {
 
 		public static Atlas FromDirectory(string path) {
 			var atlas = new Atlas();
-			atlas.Sources = new List<Texture2D>();
 
 			var contentDirectory = Engine.ContentDirectory;
 			var contentDirectoryLength = contentDirectory.Length;
@@ -275,6 +290,8 @@ namespace Monocle {
 			if (path.EndsWith(".pxprj")) {
 				contentPath = Path.Combine(Path.GetDirectoryName(path), "art");
 			}
+
+			atlas.mainDirectory = contentPath;
 			var contentPathLength = contentPath.Length;
 
 			if (Directory.Exists(contentPath)) {
@@ -294,17 +311,11 @@ namespace Monocle {
 						continue;
 
 					// get path and load
-					Texture2D texture;
-
-					if (ext == ".xnb")
-						texture = Engine.Instance.Content.Load<Texture2D>(file.Substring(contentDirectoryLength + 1).Replace(ext, ""));
-					else
-						texture = Texture2D.FromStream(Draw.SpriteBatch.GraphicsDevice, File.Open(file, FileMode.Open));
-
-					atlas.Sources.Add(texture);
+					Texture2D texture = TextureFromFile(file, contentDirectory);
 
 					// load
-					atlas.textures.Add(filepath, new MTexture(texture).GetSubtexture(0, 0, texture.Width, texture.Height));
+					//atlas.textures.Add(filepath, new MTexture(texture).GetSubtexture(0, 0, texture.Width, texture.Height));
+					atlas.textures.Add(filepath, new MTexture(texture));
 
 				}
 			}
@@ -351,10 +362,6 @@ namespace Monocle {
 			return list;
 		}
 
-		private MTexture GetAtlasSubtextureFromCacheAt(string key, int index) {
-			return orderedTexturesCache[key][index];
-		}
-
 		private MTexture GetAtlasSubtextureFromAtlasAt(string key, int index) {
 			if (index == 0 && textures.ContainsKey(key))
 				return textures[key];
@@ -379,11 +386,63 @@ namespace Monocle {
 				return GetAtlasSubtextureFromAtlasAt(key, index);
 		}
 
+		public void OnFileUpdated(string folder, string fullPath) {
+			if (folder != "art")
+				return;
+
+			var ext = Path.GetExtension(fullPath);
+			if (ext != ".png" && ext != ".bmp" && ext != ".xnb")
+				return;
+
+			string local = Path.ChangeExtension(Path.GetRelativePath(mainDirectory, fullPath), null).Replace('\\', '/');
+
+			if (textures.ContainsKey(local)) {
+				var tex = TextureFromFile(fullPath, Engine.ContentDirectory);
+				if (tex == null)
+					return;
+
+				textures[local] = new MTexture(tex);
+			}
+		}
+		public void OnFileAdded(string folder, string fullPath) {
+			if (folder != "art")
+				return;
+
+			var ext = Path.GetExtension(fullPath);
+			if (ext != ".png" && ext != ".bmp" && ext != ".xnb")
+				return;
+
+			string local = Path.ChangeExtension(Path.GetRelativePath(mainDirectory, fullPath), null).Replace('\\', '/');
+
+			if (!textures.ContainsKey(local)) {
+				var tex = TextureFromFile(fullPath, Engine.ContentDirectory);
+				if (tex == null)
+					return;
+
+				textures[local] = new MTexture(tex);
+			}
+		}
+		public void OnFileDeleted(string folder, string fullPath) {
+			if (folder != "art")
+				return;
+
+			var ext = Path.GetExtension(fullPath);
+			if (ext != ".png" && ext != ".bmp" && ext != ".xnb")
+				return;
+
+			string local = Path.ChangeExtension(Path.GetRelativePath(mainDirectory, fullPath), null).Replace('\\', '/');
+
+			if (textures.ContainsKey(local)) {
+				textures[local].Dispose();
+				textures.Remove(local);
+			}
+		}
+
 		public void Dispose() {
-			foreach (var texture in Sources)
+			foreach (var texture in textures.Values)
 				texture.Dispose();
-			Sources.Clear();
 			textures.Clear();
+			orderedTexturesCache.Clear();
 		}
 
 

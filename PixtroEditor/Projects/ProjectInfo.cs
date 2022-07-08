@@ -48,14 +48,21 @@ namespace Pixtro.Projects {
 			buildThread.Start();
 		}
 
-		public static void BuildAndRun() {
-			BuildProject(false);
-			OnSuccessfulBuild += () => {
+		public static void RunBuild() {
+			if (Building) {
+				OnSuccessfulBuild += () => {
+					Engine.OverloadGameLoop = () => {
+						Emulation.EmulationHandler.LoadGame(Path.Combine(Directory.GetCurrentDirectory(), "output.gba"));
+						Engine.OverloadGameLoop = null;
+					};
+				};
+			}
+			else {
 				Engine.OverloadGameLoop = () => {
 					Emulation.EmulationHandler.LoadGame(Path.Combine(Directory.GetCurrentDirectory(), "output.gba"));
 					Engine.OverloadGameLoop = null;
 				};
-			};
+			}
 		}
 
 		public static void BuildRelease() {
@@ -133,6 +140,7 @@ namespace Pixtro.Projects {
 			ProjectDirectory = Path.GetDirectoryName(path);
 			projectFile = Path.GetFileNameWithoutExtension(path);
 
+			FileUpdateManager.SetDirectory(ProjectDirectory);
 
 			if (File.Exists(path)) {
 				InitFromFile(path);
@@ -207,9 +215,9 @@ namespace Pixtro.Projects {
 		}
 
 		public Scenes.LevelPack GetPack(string level) {
-			level = Path.ChangeExtension(level, null);
+			level = Path.ChangeExtension(level, null).Replace('\\', '/');
 			foreach (var pair in LevelVisualPacks)
-				if (pair.Value.Contains(level.Replace('\\', '/')))
+				if (pair.Value.Contains(level))
 					foreach (var pack in VisualPacks.Values)
 						if (pack.VisualData.LevelPacks != null && pack.VisualData.LevelPacks.Contains(pair.Key))
 							return pack;

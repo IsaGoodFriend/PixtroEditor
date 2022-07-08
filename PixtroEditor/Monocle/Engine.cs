@@ -210,6 +210,8 @@ namespace Monocle {
 				SetActiveScene(new Vector2(0, EditorWindow.TOP_MENU_BAR + 1));
 			}
 
+			
+
 			Scene previousScene = activeScene;
 
 			DeltaTime = 1 / 60.0f;

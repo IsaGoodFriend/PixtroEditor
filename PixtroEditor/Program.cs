@@ -16,7 +16,13 @@ namespace Pixtro.Editor {
 
 			if (args.Length > 0 && File.Exists(args[0])) {
 				Projects.ProjectInfo.OpenProject(args[0]);
+
+				Projects.ProjectInfo.BuildProject(false);
 				CurrentState = WindowState.Editor;
+
+				while (Projects.ProjectInfo.Building) {
+					System.Threading.Thread.Sleep(100);
+				}
 			}
 			else {
 				// TODO: Create new project and project select windows to use here
@@ -44,6 +50,9 @@ namespace Pixtro.Editor {
 
 						}
 #endif
+
+						Projects.ProjectInfo.CurrentProject.CleanProject();
+
 						break;
 
 					default:

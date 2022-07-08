@@ -15,6 +15,14 @@ namespace Pixtro {
 			else
 				return "cancel";
 		}
+		public static bool AskConfirmation(string warningText) {
+			var response = MessageBox.ShowMessageBox(warningText, "Pixtro", MessageBox.BoxType.TYPE_OK_CANCEL, MessageBox.Icon.ICON_WARN);
+
+			if (response == MessageBox.Button.BUTTON_OK || response == MessageBox.Button.BUTTON_YES)
+				return true;
+			else
+				return false;
+		}
 		public static void RunTest() {
 		}
 	}

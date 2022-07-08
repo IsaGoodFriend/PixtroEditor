@@ -183,8 +183,6 @@ namespace Pixtro.Scenes {
 			tileMaps = new List<TileLayer>();
 			entities = new List<Entity>();
 
-			path = Path.Combine(Projects.ProjectInfo.CurrentProject.ProjectDirectory, "levels", path);
-
 			switch (ext) {
 				case ".txt":
 					saveType = LevelSaveType.TextFile;
@@ -402,6 +400,8 @@ namespace Pixtro.Scenes {
 
 		private Vector2 mouseDownPosition;
 		private Point resizeDirection;
+		private string currentLevel;
+		private string updateTo;
 
 		public int BrushIndex {
 			get => brushIndex;
@@ -434,15 +434,14 @@ namespace Pixtro.Scenes {
 			Camera.Zoom = ZOOM_START;
 			zoomIndex = Array.IndexOf(ZOOM_LEVELS, ZOOM_START);
 
+			FileUpdateManager.fileModified += OnFileUpdated;
+
 			baseState = LevelEditorStates.Draw;
 
 			OnMouseDown += MouseDown;
 			OnMouseUp += MouseUp;
 
-
 			palette = UIBounds.AddChild(new TilesetPalette(this)) as TilesetPalette;
-
-			LoadLevel("prologue/lvl1s.txt");
 
 			//UIBounds.AddChild(new IconBarButton(new Image(Atlases.EngineGraphics["UI/folder"])) {
 			//	OnClick = () => {
@@ -456,6 +455,20 @@ namespace Pixtro.Scenes {
 
 
 
+		}
+
+		private void OnFileUpdated(string mainFolder, string fullPath) {
+			if (currentLevel != fullPath)
+				return;
+
+			updateTo = fullPath;
+		}
+		private void StopUpdate(string mainFolder, string fullPath) {
+			if (currentLevel == fullPath) {
+
+				FileUpdateManager.fileModified -= StopUpdate;
+				FileUpdateManager.fileModified += OnFileUpdated;
+			}
 		}
 
 		private void LoadLevelLocal(string file) {
@@ -473,17 +486,49 @@ namespace Pixtro.Scenes {
 				HelperEntity.Remove(HelperEntity.Get<TileGrid>());
 			}
 
-			MainLevel = new LevelContainer(file, visual.VisualData);
+			currentLevel = Path.Combine(Projects.ProjectInfo.CurrentProject.ProjectDirectory, "levels", file).Replace('/', '\\');
+			MainLevel = new LevelContainer(currentLevel, visual.VisualData);
 
 			LoadTilesets();
 			palette.UpdateTo(VisualData);
 
 			BrushValue = VisualData.CharIndex[1];
 
+			Vector2 offset = new Vector2((UIBounds.Transform.Size.X / 2), (UIBounds.Transform.Size.Y / 2));
+
+			offset = (new Vector2(MainLevel.Width, MainLevel.Height) * TileSize * Camera.Zoom / 2) - offset;
+
+			if (offset.X > -60) {
+				offset.X = -60;
+			}
+			if (offset.Y > -15) {
+				offset.Y = -15;
+			}
+
+			Camera.Position = offset / Camera.Zoom;
+
 			UndoStates.Clear();
 		}
 
-		public void LoadLevel(string file) {
+		public override void End() {
+			FileUpdateManager.fileModified -= OnFileUpdated;
+
+			base.End();
+		}
+
+		public void LoadLevel(string file, bool forceReload = false) {
+
+			string localFile = file,
+				fullPath = file;
+
+			if (Path.IsPathRooted(file))
+				localFile = Path.GetRelativePath(Path.Combine(Projects.ProjectInfo.CurrentProject.ProjectDirectory, "levels"), file);
+			else
+				fullPath = Path.Combine(Projects.ProjectInfo.CurrentProject.ProjectDirectory, "levels", file);
+
+			if (!forceReload && currentLevel == fullPath)
+				return;
+
 			if (UndoStates.Dirty) {
 
 				switch (PromptHandler.AskForSaving("Warning!  Your level hasn't been saved!  Do you want to save before continuing?")) {
@@ -491,16 +536,17 @@ namespace Pixtro.Scenes {
 						MainLevel.Save();
 						goto case "continue";
 					case "continue":
-						LoadLevelLocal(file);
+						LoadLevelLocal(localFile);
 						break;
 				}
 				//task.Start();
 			}
 			else {
-				LoadLevelLocal(file);
+				LoadLevelLocal(localFile);
 			}
 
 		}
+
 
 		private void LoadTilesets() {
 			visualGrids = new TileGrid[MainLevel.tileMaps.Count];
@@ -750,12 +796,16 @@ namespace Pixtro.Scenes {
 
 		private void MouseUp(int x, int y, bool newScene) {
 
+			OnMouseDrag -= MouseDragged;
+
 			var state = baseState;
 			if (dragState != LevelEditorStates.None) {
 				state = dragState;
 			}
 			if (newScene)
 				state = LevelEditorStates.None;
+
+			dragState = LevelEditorStates.None;
 
 			switch (state) {
 				case LevelEditorStates.Rectangle:
@@ -779,9 +829,6 @@ namespace Pixtro.Scenes {
 			}
 
 			SetUndoState(state);
-
-			dragState = LevelEditorStates.None;
-			OnMouseDrag -= MouseDragged;
 		}
 
 		private void MouseDragged(int x, int y, bool newScene) {
@@ -973,11 +1020,11 @@ namespace Pixtro.Scenes {
 			if (width <= 0 || height <= 0)
 				return;
 
-			x = Math.Max(x, 0);
-			y = Math.Max(y, 0);
-
 			width = Math.Min(x + width, MainLevel.Width);
 			height = Math.Min(y + height, MainLevel.Height);
+
+			x = Math.Max(x, 0);
+			y = Math.Max(y, 0);
 
 			for (; x < width; ++x) {
 				for (int yy = y; yy < height; ++yy) {
@@ -1013,8 +1060,13 @@ namespace Pixtro.Scenes {
 				
 			}
 			if (MInput.ControlsCheck && MInput.Keyboard.Pressed(Keys.S)) {
+
+				FileUpdateManager.fileModified -= OnFileUpdated;
+				FileUpdateManager.fileModified += StopUpdate;
+
 				MainLevel.Save();
 				UndoStates.SetNotDirty();
+
 			}
 
 			if (MInput.Mouse.CheckLeftButton && MInput.Keyboard.Pressed(Keys.Escape)) {
@@ -1058,6 +1110,13 @@ namespace Pixtro.Scenes {
 
 		public override void Update() {
 			base.Update();
+			if (Engine.Instance.IsActive && updateTo != null) {
+
+				if (PromptHandler.AskConfirmation("The file you're currently working on has been updated.  Do you want to reload it?")) {
+					LoadLevel(updateTo, true);
+				}
+				updateTo = null;
+			}
 			if (VisualBounds.Contains(MInput.Mouse.X, MInput.Mouse.Y) && MInput.Mouse.WheelDelta != 0) {
 
 				if (MInput.AltsCheck) {
@@ -1078,6 +1137,8 @@ namespace Pixtro.Scenes {
 
 		public override void DrawGraphics() {
 
+			if (MainLevel == null)
+				return;
 
 			var state = baseState;
 			if (dragState != LevelEditorStates.None) {
