@@ -96,14 +96,20 @@ namespace Pixtro.Compiler {
 
         static MainProgram() {
             yamlParse = new DeserializerBuilder().WithNamingConvention(NullNamingConvention.Instance).Build();
+            yamlSerializer = new SerializerBuilder().Build();
         }
 
         private static bool Error;
         private readonly static IDeserializer yamlParse;
+        private readonly static ISerializer yamlSerializer;
 
 
         public static T ParseMeta<T>(string yamlData) {
             T retval = yamlParse.Deserialize<T>(yamlData);
+            return retval;
+        }
+        public static string SerializeMeta(object data) {
+            string retval = yamlSerializer.Serialize(data);
             return retval;
         }
 

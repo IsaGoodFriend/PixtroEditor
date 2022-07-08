@@ -152,6 +152,9 @@ namespace Pixtro.Compiler {
 
 			return (ushort)(r | (g << 5) | (b << 10));
 		}
+		public static Color FromGBA(this ushort color) {
+			return Color.FromArgb(255, (color & 0x1F) << 3, (color & 0x3E0) >> 2, (color & 0x7C00) >> 7);
+		}
 
 		public static int IndexOf<T>(this List<T> list, T compareTo, IEqualityComparer<T> compareWith)
 		{

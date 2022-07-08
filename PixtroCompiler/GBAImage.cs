@@ -8,6 +8,18 @@ namespace Pixtro.Compiler {
 	public struct FloatColor {
 		public float R, G, B, A;
 
+		public FloatColor(float r, float g, float b, float a) {
+			R = r;
+			G = b;
+			B = b;
+			A = a;
+
+			if (A == 0) {
+				R = 0;
+				G = 0;
+				B = 0;
+			}
+		}
 		public FloatColor(byte r, byte g, byte b, byte a) {
 			R = r / 255f;
 			G = g / 255f;
@@ -155,8 +167,6 @@ namespace Pixtro.Compiler {
 
 			List<GBAImage> images = new List<GBAImage>();
 
-			MainProgram.DebugLog(Path.GetFileName(path));
-
 			var data = map.LockBits(new Rectangle(0, 0, map.Width, map.Height), System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 
 			byte* ptr = (byte*)data.Scan0;
@@ -240,6 +250,82 @@ namespace Pixtro.Compiler {
 			
 		}
 
+		public static GBAImage[] FromCompiled(string path) {
+			GBAImage[] retval = null;
+
+			using (BinaryReader reader = new BinaryReader(File.OpenRead(path))) {
+				retval = new GBAImage[reader.ReadInt16()];
+				int width = reader.ReadInt16();
+				int height = reader.ReadInt16();
+				reader.BaseStream.Seek(2, SeekOrigin.Current);
+
+				for (int i = 0; i < retval.Length; ++i) {
+					GBAImage image = new GBAImage();
+					image.Width = width;
+					image.Height = height;
+
+					int len = reader.ReadInt32();
+
+					image.finalPalettes = new List<Color[]>();
+
+					for (int j = 0; j < len; ++j) {
+						Color[] pal = new Color[16];
+						for (int p = 0; p < 16; ++p) {
+							pal[p] = reader.ReadUInt16().FromGBA();
+						}
+						image.finalPalettes.Add(pal);
+					}
+
+					image.baseValues = new int[width, height];
+					image.originalData = new FloatColor[width, height];
+					for (int y = 0; y < height; ++y) {
+						for (int x = 0; x < width; ++x) {
+							image.originalData[x, y] = new FloatColor(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+						}
+					}
+					image.RecompileColors();
+
+					retval[i] = image;
+				}
+			}
+
+			return retval;
+		}
+
+		public static void CompileSprites(string path, GBAImage[] images) {
+
+			if (!Directory.Exists(Path.GetDirectoryName(path))) {
+				Directory.CreateDirectory(Path.GetDirectoryName(path));
+			}
+			using (BinaryWriter writer = new BinaryWriter(File.Open(path, FileMode.Create, FileAccess.Write))) {
+				writer.Write((short)images.Length);
+				writer.Write((short)images[0].Width);
+				writer.Write((short)images[0].Height);
+				writer.Write((short)0);
+
+				foreach (var item in images) {
+					writer.Write(item.finalPalettes.Count);
+
+					foreach (var palette in item.finalPalettes) {
+						int i;
+						for (i = 0; i < palette.Length; ++i)
+							writer.Write(palette[i].ToGBA());
+						for (; i < 16; ++i)
+							writer.Write((ushort)0);
+					}
+
+					for (int y = 0; y < item.Height; ++y) {
+						for (int x = 0; x < item.Width; ++x) {
+							writer.Write(item.originalData[x, y].R);
+							writer.Write(item.originalData[x, y].G);
+							writer.Write(item.originalData[x, y].B);
+							writer.Write(item.originalData[x, y].A);
+						}
+					}
+				}
+			}
+		}
+
 		public int Width { get; private set; }
 		public int Height { get; private set; }
 
@@ -251,6 +337,9 @@ namespace Pixtro.Compiler {
 
 		private bool palettesLocked;
 
+		private GBAImage() {
+
+		}
 		private GBAImage(FloatColor[,] colors, List<Color[]> exportPalettes = null)
 		{
 			Width = colors.GetLength(0);
