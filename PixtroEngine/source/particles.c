@@ -2,24 +2,24 @@
 #include <string.h>
 
 #include "core.h"
+#include "math.h"
 #include "particles.h"
 #include "sprites.h"
-#include "math.h"
 
 // Life time			(8 bits)
 // X vel				(8 bits  (X.X))
 // X Coor				(16 bits (XXX.X))
-#define ATT1_LIFE 0xFF000000
+#define ATT1_LIFE	0xFF000000
 #define ATT1_LIFE_1 0x01000000
 
 // Animation frame		(4 bits)
 // Color index			(4 bits)
 // Y vel				(8 bits  (X.X))
 // Y Coor				(16 bits (XXX.X))
-#define ATT2_ANIMFRAME 0xF0000000
+#define ATT2_ANIMFRAME		0xF0000000
 #define ATT2_ANIMFRAME_TICK 0x10000000
-#define ATT2_PAL 0x0F000000
-#define ATT2_PAL_S 24
+#define ATT2_PAL			0x0F000000
+#define ATT2_PAL_S			24
 
 // Default Life Time 	(8 bits)
 // ???
@@ -27,16 +27,16 @@
 // Priority				(2 bits)
 // Flip Data			(2 bits)
 // Particle Frame start	(8 bits)
-#define ATT3_DEF_LIFE 0xFF000000
+#define ATT3_DEF_LIFE		0xFF000000
 #define ATT3_DEF_LIFE_SHIFT 0
-#define ATT3_GRAV_1 0x00010000
-#define ATT3_GRAV_S 0x00020000
-#define ATT3_PRIO 0x0000C000
-#define ATT3_PRIO_S 12
-#define ATT3_FLIP 0x00003000
-#define ATT3_START_FRAME 0x00000FFF
+#define ATT3_GRAV_1			0x00010000
+#define ATT3_GRAV_S			0x00020000
+#define ATT3_PRIO			0x0000C000
+#define ATT3_PRIO_S			12
+#define ATT3_FLIP			0x00003000
+#define ATT3_START_FRAME	0x00000FFF
 
-#define PARTICLE_MAX 288 // 96 * 3
+#define PARTICLE_MAX	   288 // 96 * 3
 #define PARTICLE_DATA_SIZE 3
 
 unsigned int particle_data[PARTICLE_MAX];
@@ -46,12 +46,13 @@ int lastParticle;
 
 void add_particle(int att1, int att2, int att3);
 
+extern const int particles[];
+
 extern int sprite_count;
-extern OBJ_ATTR *sprite_pointer;
+extern OBJ_ATTR* sprite_pointer;
 extern int cam_x, cam_y;
 
-void add_particle_basic(int x, int y, int particle, int frame_time, int pal, int priority)
-{
+void add_particle_basic(int x, int y, int particle, int frame_time, int pal, int priority) {
 
 	if (!frame_time || !particle)
 		return;
@@ -84,10 +85,9 @@ void add_particle_basic(int x, int y, int particle, int frame_time, int pal, int
 	add_particle(x, y, particle);
 }
 
-void add_particle(int att1, int att2, int att3)
-{
+void add_particle(int att1, int att2, int att3) {
 
-	particle_data[lastParticle] = att1;
+	particle_data[lastParticle]		= att1;
 	particle_data[lastParticle + 1] = att2;
 	particle_data[lastParticle + 2] = att3;
 
@@ -97,8 +97,7 @@ void add_particle(int att1, int att2, int att3)
 	lastParticle %= PARTICLE_MAX;
 }
 
-void update_particles()
-{
+void update_particles() {
 	int index, moveParticles = 1;
 	int sp = 0;
 
@@ -107,18 +106,14 @@ void update_particles()
 		moveParticles = 0;
 #endif
 
-	for (index = 0; index < PARTICLE_MAX; index += PARTICLE_DATA_SIZE)
-	{
-		if (!(particle_data[index] & ATT1_LIFE))
-		{
-			if (particle_data[index + 1] & ATT2_ANIMFRAME)
-			{
+	for (index = 0; index < PARTICLE_MAX; index += PARTICLE_DATA_SIZE) {
+		if (!(particle_data[index] & ATT1_LIFE)) {
+			if (particle_data[index + 1] & ATT2_ANIMFRAME) {
 				particle_data[index + 1] -= ATT2_ANIMFRAME_TICK;
 				particle_data[index] |= ((particle_data[index + 2] & ATT3_DEF_LIFE));
 
 				memcpy(&tile_mem[4][index / 3], &particles[PARTICLE_FRAME(index)], 32);
-			}
-			else
+			} else
 				continue;
 		}
 
@@ -132,8 +127,7 @@ void update_particles()
 		particle_data[index] = pos | (particle_data[index] & 0xFFFF0000);
 
 		pos = (pos >> 4) - cam_x;
-		if (pos < -8 || pos > 240)
-		{
+		if (pos < -8 || pos > 240) {
 			particle_data[index] &= ~ATT1_LIFE;
 			continue;
 		}
@@ -146,8 +140,7 @@ void update_particles()
 		particle_data[index + 1] = pos | (particle_data[index + 1] & 0xFF000000) | ((vel & 0xFF) << 16);
 
 		pos = (pos >> 4) - cam_y;
-		if (pos < -8 || pos > 160)
-		{
+		if (pos < -8 || pos > 160) {
 			particle_data[index] &= ~ATT1_LIFE;
 			continue;
 		}
@@ -163,12 +156,10 @@ void update_particles()
 	sprite_count += sp;
 	sprite_pointer += sp;
 }
-void ClearParticles()
-{
+void ClearParticles() {
 	int index;
-	for (index = 0; index < PARTICLE_MAX; index += PARTICLE_DATA_SIZE)
-	{
-		particle_data[index] = 0;
+	for (index = 0; index < PARTICLE_MAX; index += PARTICLE_DATA_SIZE) {
+		particle_data[index]	 = 0;
 		particle_data[index + 1] = 0;
 	}
 }

@@ -1,9 +1,10 @@
 #pragma once
+#include "_pix_particles.h"
 
-#define PGRAVITY_LIGHT		0
-#define PGRAVITY_HEAVY		1
-#define PGRAVITY_REVERSE	2
-#define PGRAVITY_NONE		3
+#define PGRAVITY_LIGHT	 0
+#define PGRAVITY_HEAVY	 1
+#define PGRAVITY_REVERSE 2
+#define PGRAVITY_NONE	 3
 
 // Life time			(4 bits)
 // Default Life Time 	(4 bits)

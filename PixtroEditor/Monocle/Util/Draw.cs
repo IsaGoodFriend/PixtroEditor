@@ -28,9 +28,6 @@ namespace Monocle {
 			Y -= y / 2;
 		}
 	}
-	public enum WindowType {
-		XOnly, Normal, Maximized
-	}
 	public static class Draw {
 		/// <summary>
 		/// The currently-rendering Renderer
@@ -201,6 +198,10 @@ namespace Monocle {
 
 			transparent.Clear();
 		}
+
+		#region MTexture
+
+		#endregion
 
 		#region Line
 

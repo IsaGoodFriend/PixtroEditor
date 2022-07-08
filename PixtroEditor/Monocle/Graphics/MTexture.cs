@@ -219,12 +219,20 @@ namespace Monocle {
 
 		#region Draw
 
+		protected virtual void DrawLocal(Texture2D tex, Vector2 position, Rectangle clip, Color color, float rotation, Vector2 offset, Vector2 scale, SpriteEffects effect) {
+			Monocle.Draw.SpriteBatch.Draw(tex, position, clip, color, rotation, offset, scale, effect, Monocle.Draw.RealDepth);
+		}
+
+		private void DrawLocal(Texture2D tex, Vector2 position, Rectangle clip, Color color, float rotation, Vector2 offset, float scale, SpriteEffects effect) {
+			DrawLocal(tex, position, clip, color, rotation, offset, Vector2.One * scale, effect);
+		}
+
 		public void Draw(Vector2 position) {
 #if DEBUG
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, Color.White, 0, -DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, Color.White, 0, -DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void Draw(Vector2 position, Vector2 origin) {
@@ -232,7 +240,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, Color.White, 0, origin - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, Color.White, 0, origin - DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void Draw(Vector2 position, Vector2 origin, Color color) {
@@ -240,7 +248,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, origin - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, origin - DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void Draw(Vector2 position, Vector2 origin, Color color, float scale) {
@@ -248,7 +256,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, origin - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, origin - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void Draw(Vector2 position, Vector2 origin, Color color, float scale, float rotation) {
@@ -256,7 +264,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void Draw(Vector2 position, Vector2 origin, Color color, float scale, float rotation, SpriteEffects flip) {
@@ -264,7 +272,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, flip);
 		}
 
 		public void Draw(Vector2 position, Vector2 origin, Color color, Vector2 scale) {
@@ -272,7 +280,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, origin - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, origin - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void Draw(Vector2 position, Vector2 origin, Color color, Vector2 scale, float rotation) {
@@ -280,7 +288,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void Draw(Vector2 position, Vector2 origin, Color color, Vector2 scale, float rotation, SpriteEffects flip) {
@@ -288,7 +296,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, flip);
 		}
 
 		public void Draw(Vector2 position, Vector2 origin, Color color, Vector2 scale, float rotation, Rectangle clip) {
@@ -296,7 +304,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, GetRelativeRect(clip), color, rotation, origin - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, GetRelativeRect(clip), color, rotation, origin - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		#endregion
@@ -308,7 +316,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, Color.White, 0, Center - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, Color.White, 0, Center - DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void DrawCentered(Vector2 position, Color color) {
@@ -316,7 +324,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, Center - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, Center - DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void DrawCentered(Vector2 position, Color color, float scale) {
@@ -324,7 +332,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, Center - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, Center - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawCentered(Vector2 position, Color color, float scale, float rotation) {
@@ -332,7 +340,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawCentered(Vector2 position, Color color, float scale, float rotation, SpriteEffects flip) {
@@ -340,7 +348,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, flip);
 		}
 
 		public void DrawCentered(Vector2 position, Color color, Vector2 scale) {
@@ -348,7 +356,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, Center - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, Center - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawCentered(Vector2 position, Color color, Vector2 scale, float rotation) {
@@ -356,7 +364,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawCentered(Vector2 position, Color color, Vector2 scale, float rotation, SpriteEffects flip) {
@@ -364,7 +372,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, flip);
 		}
 
 		#endregion
@@ -376,7 +384,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, Color.White, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, Color.White, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void DrawJustified(Vector2 position, Vector2 justify, Color color) {
@@ -384,7 +392,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void DrawJustified(Vector2 position, Vector2 justify, Color color, float scale) {
@@ -392,7 +400,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawJustified(Vector2 position, Vector2 justify, Color color, float scale, float rotation) {
@@ -400,7 +408,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawJustified(Vector2 position, Vector2 justify, Color color, float scale, float rotation, SpriteEffects flip) {
@@ -408,7 +416,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, flip);
 		}
 
 		public void DrawJustified(Vector2 position, Vector2 justify, Color color, Vector2 scale) {
@@ -416,7 +424,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawJustified(Vector2 position, Vector2 justify, Color color, Vector2 scale, float rotation) {
@@ -424,7 +432,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawJustified(Vector2 position, Vector2 justify, Color color, Vector2 scale, float rotation, SpriteEffects flip) {
@@ -432,7 +440,7 @@ namespace Monocle {
 			if (Texture.IsDisposed)
 				throw new Exception("Texture2D Is Disposed");
 #endif
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, flip);
 		}
 
 		#endregion
@@ -448,9 +456,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, -DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, -DrawOffset, 1f, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, Color.White, 0, -DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, Color.White, 0, -DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void DrawOutline(Vector2 position, Vector2 origin) {
@@ -462,9 +470,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, origin - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, origin - DrawOffset, 1f, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, Color.White, 0, origin - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, Color.White, 0, origin - DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void DrawOutline(Vector2 position, Vector2 origin, Color color) {
@@ -476,9 +484,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, origin - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, origin - DrawOffset, 1f, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, origin - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, origin - DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void DrawOutline(Vector2 position, Vector2 origin, Color color, float scale) {
@@ -490,9 +498,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, origin - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, origin - DrawOffset, scale, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, origin - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, origin - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawOutline(Vector2 position, Vector2 origin, Color color, float scale, float rotation) {
@@ -504,9 +512,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, origin - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, origin - DrawOffset, scale, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawOutline(Vector2 position, Vector2 origin, Color color, float scale, float rotation, SpriteEffects flip) {
@@ -518,9 +526,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, origin - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, origin - DrawOffset, scale, flip);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, flip);
 		}
 
 		public void DrawOutline(Vector2 position, Vector2 origin, Color color, Vector2 scale) {
@@ -532,9 +540,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, origin - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, origin - DrawOffset, scale, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, origin - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, origin - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawOutline(Vector2 position, Vector2 origin, Color color, Vector2 scale, float rotation) {
@@ -546,9 +554,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, origin - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, origin - DrawOffset, scale, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawOutline(Vector2 position, Vector2 origin, Color color, Vector2 scale, float rotation, SpriteEffects flip) {
@@ -560,9 +568,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, origin - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, origin - DrawOffset, scale, flip);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, origin - DrawOffset, scale, flip);
 		}
 
 		#endregion
@@ -578,9 +586,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, Center - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, Center - DrawOffset, 1f, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, Color.White, 0, Center - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, Color.White, 0, Center - DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void DrawOutlineCentered(Vector2 position, Color color) {
@@ -592,9 +600,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, Center - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, Center - DrawOffset, 1f, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, Center - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, Center - DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void DrawOutlineCentered(Vector2 position, Color color, float scale) {
@@ -606,9 +614,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, Center - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, Center - DrawOffset, scale, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, Center - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, Center - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawOutlineCentered(Vector2 position, Color color, float scale, float rotation) {
@@ -620,9 +628,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, Center - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, Center - DrawOffset, scale, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawOutlineCentered(Vector2 position, Color color, float scale, float rotation, SpriteEffects flip) {
@@ -634,9 +642,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, Center - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, Center - DrawOffset, scale, flip);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, flip);
 		}
 
 		public void DrawOutlineCentered(Vector2 position, Color color, Vector2 scale) {
@@ -648,9 +656,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, Center - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, Center - DrawOffset, scale, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, Center - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, Center - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawOutlineCentered(Vector2 position, Color color, Vector2 scale, float rotation) {
@@ -662,9 +670,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, Center - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, Center - DrawOffset, scale, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawOutlineCentered(Vector2 position, Color color, Vector2 scale, float rotation, SpriteEffects flip) {
@@ -676,9 +684,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, Center - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, Center - DrawOffset, scale, flip);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, Center - DrawOffset, scale, flip);
 		}
 
 		#endregion
@@ -694,9 +702,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, 1f, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, Color.White, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, Color.White, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void DrawOutlineJustified(Vector2 position, Vector2 justify, Color color) {
@@ -708,9 +716,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, 1f, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, 1f, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, 1f, SpriteEffects.None);
 		}
 
 		public void DrawOutlineJustified(Vector2 position, Vector2 justify, Color color, float scale) {
@@ -722,9 +730,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawOutlineJustified(Vector2 position, Vector2 justify, Color color, float scale, float rotation) {
@@ -736,9 +744,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawOutlineJustified(Vector2 position, Vector2 justify, Color color, float scale, float rotation, SpriteEffects flip) {
@@ -750,9 +758,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, flip);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, flip);
 		}
 
 		public void DrawOutlineJustified(Vector2 position, Vector2 justify, Color color, Vector2 scale) {
@@ -764,9 +772,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, 0, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawOutlineJustified(Vector2 position, Vector2 justify, Color color, Vector2 scale, float rotation) {
@@ -778,9 +786,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, SpriteEffects.None);
 		}
 
 		public void DrawOutlineJustified(Vector2 position, Vector2 justify, Color color, Vector2 scale, float rotation, SpriteEffects flip) {
@@ -792,9 +800,9 @@ namespace Monocle {
 			for (var i = -1; i <= 1; i++)
 				for (var j = -1; j <= 1; j++)
 					if (i != 0 || j != 0)
-						Monocle.Draw.SpriteBatch.Draw(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+						DrawLocal(Texture, position + new Vector2(i, j), ClipRect, Color.Black, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, flip);
 
-			Monocle.Draw.SpriteBatch.Draw(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, flip, Monocle.Draw.RealDepth);
+			DrawLocal(Texture, position, ClipRect, color, rotation, new Vector2(Width * justify.X, Height * justify.Y) - DrawOffset, scale, flip);
 		}
 
 		#endregion
