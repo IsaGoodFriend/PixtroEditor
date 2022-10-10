@@ -51,8 +51,9 @@ namespace Pixtro.Editor {
 						}
 #endif
 
+#if !DEBUG
 						Projects.ProjectInfo.CurrentProject.CleanProject();
-
+#endif
 						break;
 
 					default:

@@ -121,7 +121,12 @@ namespace Pixtro.Projects {
 		private BinaryFileWriter nodes;
 
 		public bool BuiltRelease;
+#if DEBUG
+		private bool justLoaded = false;
+#else
+
 		private bool justLoaded = true;
+#endif
 
 		private bool dirty;
 		public bool Dirty {

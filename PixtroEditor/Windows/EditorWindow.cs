@@ -147,12 +147,37 @@ namespace Pixtro.Editor {
 		private void OnFileChanges(string directory, string fullPath) {
 			bool dirty = false;
 
-			string local = Path.GetRelativePath(Path.Combine(Projects.ProjectInfo.CurrentProject.ProjectDirectory, directory), fullPath);
+			string local = Path.GetRelativePath(Path.Combine(Projects.ProjectInfo.CurrentProject.ProjectDirectory, directory), fullPath),
+				ext = Path.GetExtension(fullPath);
 
 			switch (directory) {
 				case "levels":
 					if (local == "meta_level.json" || local.Contains('\\')) {
 						dirty = true;
+					}
+					break;
+				case "audio":
+					dirty = true;
+					break;
+				case "dialogue":
+				case "source":
+					dirty = true;
+					break;
+				case "art":
+					if (!local.Contains('\\') ||(ext != ".ase" && ext != ".aseprite" && ext != ".png" && ext != ".bmp"))
+						break;
+					string[] subfolder = local.Split('\\');
+
+					switch (subfolder[0]) {
+						case "backgrounds":
+						case "fonts":
+						case "particles":
+						case "sprites":
+						case "tilesets":
+						case "titlecards":
+						case "transitions":
+							dirty = true;
+							break;
 					}
 					break;
 			}

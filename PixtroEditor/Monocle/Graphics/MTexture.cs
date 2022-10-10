@@ -220,7 +220,10 @@ namespace Monocle {
 		#region Draw
 
 		protected virtual void DrawLocal(Texture2D tex, Vector2 position, Rectangle clip, Color color, float rotation, Vector2 offset, Vector2 scale, SpriteEffects effect) {
+			var sb = Monocle.Draw.SpriteBatch;
+
 			Monocle.Draw.SpriteBatch.Draw(tex, position, clip, color, rotation, offset, scale, effect, Monocle.Draw.RealDepth);
+			
 		}
 
 		private void DrawLocal(Texture2D tex, Vector2 position, Rectangle clip, Color color, float rotation, Vector2 offset, float scale, SpriteEffects effect) {
